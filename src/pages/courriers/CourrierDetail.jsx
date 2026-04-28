@@ -4,6 +4,7 @@ import { USERS } from '../../constants/users';
 import { SERVICES } from '../../constants/services';
 import { CORR_EMIS_STATUTS, CORR_RECU_STATUTS } from '../../constants/statuts';
 import { fmtDate, today } from '../../utils/dates';
+import { supabase } from '../../lib/supabase';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Btn from '../../components/ui/Btn';
@@ -100,13 +101,18 @@ function Row({ label, value }) {
 
 function UpdateStatutModal({ courrier, setCourriers, user, onClose }) {
   const allStatuts = courrier.sens === 'emis' ? CORR_EMIS_STATUTS : CORR_RECU_STATUTS;
-  const [statut, setStatut]   = useState(courrier.statut);
-  const [note, setNote]       = useState('');
+  const [statut, setStatut] = useState(courrier.statut);
+  const [note, setNote]     = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const save = () => {
+  const save = async () => {
+    setSaving(true);
+    const updates = { statut, note_interne: note || courrier.noteInterne };
+    await supabase.from('courriers').update(updates).eq('id', courrier.id);
     setCourriers(cs => cs.map(c => c.id === courrier.id
       ? { ...c, statut, noteInterne: note || c.noteInterne }
       : c));
+    setSaving(false);
     onClose();
   };
 
@@ -120,7 +126,7 @@ function UpdateStatutModal({ courrier, setCourriers, user, onClose }) {
         required
       />
       <Textarea label="Note interne (optionnel)" value={note} onChange={setNote} rows={2} />
-      <Btn onClick={save} full>Enregistrer</Btn>
+      <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Btn>
     </Modal>
   );
 }

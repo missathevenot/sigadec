@@ -4,6 +4,8 @@ import { USERS } from '../../constants/users';
 import { SERVICES } from '../../constants/services';
 import { DIL_STATUTS } from '../../constants/statuts';
 import { fmtDate, today } from '../../utils/dates';
+import { supabase } from '../../lib/supabase';
+import { useStore } from '../../store';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import PBar from '../../components/ui/PBar';
@@ -14,15 +16,15 @@ import Textarea from '../../components/ui/Textarea';
 import Input from '../../components/ui/Input';
 
 export default function DiligenceDetail({ diligence, diligences, setDiligences, courriers, user, navigate }) {
-  const [modalOpen, setModalOpen] = useState(false);
+  const { users } = useStore();
+  const [modalOpen, setModal] = useState(false);
 
-  if (!diligence) return (
-    <div style={{ padding: 20, textAlign: 'center', color: C.sec }}>Diligence introuvable.</div>
-  );
+  if (!diligence) return <div style={{ padding: 20, textAlign: 'center', color: C.sec }}>Diligence introuvable.</div>;
 
-  const st = DIL_STATUTS.find(s => s.v === diligence.statut);
-  const assignee = USERS.find(u => u.id === diligence.assigneA);
-  const svcs = (diligence.serviceIds || []).map(id => SERVICES.find(s => s.id === id)).filter(Boolean);
+  const st       = DIL_STATUTS.find(s => s.v === diligence.statut);
+  const allUsers = users.length ? users : USERS;
+  const assignee = allUsers.find(u => u.id === diligence.assigneA);
+  const svcs     = (diligence.serviceIds || []).map(id => SERVICES.find(s => s.id === id)).filter(Boolean);
   const likedCourriers = (diligence.courrierIds || []).map(id => courriers.find(c => c.id === id)).filter(Boolean);
 
   return (
@@ -69,9 +71,7 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
         <Card style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.sec, marginBottom: 8 }}>COURRIERS LIÉS</div>
           {likedCourriers.map(c => (
-            <div key={c.id} style={{ fontSize: 12, color: C.cours, marginBottom: 4 }}>
-              ✉️ {c.reference} — {c.objet}
-            </div>
+            <div key={c.id} style={{ fontSize: 12, color: C.cours, marginBottom: 4 }}>✉️ {c.reference} — {c.objet}</div>
           ))}
         </Card>
       )}
@@ -106,16 +106,9 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
         </div>
       )}
 
-      <Btn onClick={() => setModalOpen(true)} full>Mettre à jour</Btn>
+      <Btn onClick={() => setModal(true)} full>Mettre à jour</Btn>
 
-      {modalOpen && (
-        <UpdateModal
-          diligence={diligence}
-          setDiligences={setDiligences}
-          user={user}
-          onClose={() => setModalOpen(false)}
-        />
-      )}
+      {modalOpen && <UpdateModal diligence={diligence} setDiligences={setDiligences} user={user} onClose={() => setModal(false)} />}
     </div>
   );
 }
@@ -130,37 +123,43 @@ function Row({ label, value }) {
 }
 
 function UpdateModal({ diligence, setDiligences, user, onClose }) {
-  const [statut, setStatut]             = useState(diligence.statut);
-  const [progression, setProgression]   = useState(diligence.progression);
-  const [commentaire, setCommentaire]   = useState('');
-  const [dateReport, setDateReport]     = useState('');
-  const [facteursReport, setFacteurs]   = useState('');
+  const [statut, setStatut]           = useState(diligence.statut);
+  const [progression, setProgression] = useState(diligence.progression);
+  const [commentaire, setCommentaire] = useState('');
+  const [dateReport, setDateReport]   = useState('');
+  const [facteursReport, setFacteurs] = useState('');
+  const [saving, setSaving]           = useState(false);
   const [err, setErr] = useState('');
 
-  const statutOptions = DIL_STATUTS.map(s => ({ value: s.v, label: s.l }));
-
-  const save = () => {
+  const save = async () => {
     if (!commentaire.trim()) { setErr('Le commentaire est obligatoire.'); return; }
-    if (statut === 'reportee' && !dateReport) { setErr('La nouvelle date est requise pour un report.'); return; }
+    if (statut === 'reportee' && !dateReport) { setErr('La nouvelle date est requise.'); return; }
+    setSaving(true);
     const entry = {
-      date: today(), statut, progression: Number(progression), commentaire: commentaire.trim(),
-      auteur: `${user.prenom} ${user.nom}`,
+      date: today(), statut, progression: Number(progression),
+      commentaire: commentaire.trim(), auteur: `${user.prenom} ${user.nom}`,
     };
+    const newHisto = [...(diligence.historique || []), entry];
+    const updates = {
+      statut, progression: Number(progression), historique: newHisto,
+      date_report: statut === 'reportee' ? dateReport : diligence.dateReport,
+      facteurs_report: statut === 'reportee' ? facteursReport : diligence.facteursReport,
+    };
+    await supabase.from('diligences').update(updates).eq('id', diligence.id);
     setDiligences(ds => ds.map(d => d.id === diligence.id
-      ? { ...d, statut, progression: Number(progression), historique: [...(d.historique || []), entry],
-          dateReport: statut === 'reportee' ? dateReport : d.dateReport,
-          facteursReport: statut === 'reportee' ? facteursReport : d.facteursReport }
+      ? { ...d, statut, progression: Number(progression), historique: newHisto,
+          dateReport: updates.date_report, facteursReport: updates.facteurs_report }
       : d));
+    setSaving(false);
     onClose();
   };
 
   return (
     <Modal title="Mettre à jour la diligence" sub={diligence.reference} onClose={onClose}>
-      <Select label="Nouveau statut" value={statut} onChange={setStatut} options={statutOptions} required />
+      <Select label="Nouveau statut" value={statut} onChange={setStatut} options={DIL_STATUTS.map(s => ({ value: s.v, label: s.l }))} required />
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 4 }}>Progression : {progression}%</label>
-        <input type="range" min={0} max={100} value={progression} onChange={e => setProgression(e.target.value)}
-          style={{ width: '100%' }} />
+        <input type="range" min={0} max={100} value={progression} onChange={e => setProgression(e.target.value)} style={{ width: '100%' }} />
       </div>
       {statut === 'reportee' && (
         <>
@@ -170,7 +169,7 @@ function UpdateModal({ diligence, setDiligences, user, onClose }) {
       )}
       <Textarea label="Commentaire" value={commentaire} onChange={setCommentaire} rows={3} required />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={save} full>Enregistrer la mise à jour</Btn>
+      <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer la mise à jour'}</Btn>
     </Modal>
   );
 }

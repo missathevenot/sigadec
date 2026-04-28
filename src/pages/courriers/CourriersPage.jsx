@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { C } from '../../constants/colors';
 import { SERVICES } from '../../constants/services';
-import { USERS } from '../../constants/users';
 import { ROLES_LABELS, ROLES_COURRIER_RECU } from '../../constants/roles';
 import { CORR_EMIS_STATUTS, CORR_RECU_STATUTS } from '../../constants/statuts';
 import { fmtDate, today } from '../../utils/dates';
 import { matchSearch } from '../../utils/search';
 import { genRef } from '../../utils/refs';
+import { supabase } from '../../lib/supabase';
+import { courrierToDb } from '../../lib/mappers';
+import { useStore } from '../../store';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Btn from '../../components/ui/Btn';
@@ -27,7 +29,7 @@ const FILTRES = [
 export default function CourriersPage({ courriers, setCourriers, user, navigate }) {
   const [search, setSearch]   = useState('');
   const [filtre, setFiltre]   = useState('all');
-  const [modalOpen, setModal] = useState(false);
+  const [modal, setModal]     = useState(false);
 
   const showStats = ['secretariat','directeur','admin'].includes(user.role);
   const total   = courriers.length;
@@ -38,9 +40,9 @@ export default function CourriersPage({ courriers, setCourriers, user, navigate 
   const filtered = courriers
     .filter(c => {
       if (!matchSearch(c, search)) return false;
-      if (filtre === 'recu'    && c.sens !== 'recu')            return false;
-      if (filtre === 'emis'    && c.sens !== 'emis')            return false;
-      if (filtre === 'urgents' && c.joursAttente <= 10)         return false;
+      if (filtre === 'recu'    && c.sens !== 'recu')   return false;
+      if (filtre === 'emis'    && c.sens !== 'emis')   return false;
+      if (filtre === 'urgents' && c.joursAttente <= 10) return false;
       return true;
     })
     .sort((a, b) => new Date(b.dateEmission) - new Date(a.dateEmission));
@@ -49,10 +51,10 @@ export default function CourriersPage({ courriers, setCourriers, user, navigate 
     <div style={{ padding: '14px 14px 0', animation: 'pageIn .22s ease-out' }}>
       {showStats && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
-          <StatBox label="Total" value={total} color={C.cours} />
+          <StatBox label="Total"    value={total}   color={C.cours} />
           <StatBox label="En cours" value={enCours} color={C.orng} />
-          <StatBox label="Urgents" value={urgents} color={C.urg} />
-          <StatBox label="Résolus" value={resolus} color={C.ok} />
+          <StatBox label="Urgents"  value={urgents} color={C.urg} />
+          <StatBox label="Résolus"  value={resolus} color={C.ok} />
         </div>
       )}
 
@@ -66,11 +68,7 @@ export default function CourriersPage({ courriers, setCourriers, user, navigate 
       <input
         value={search} onChange={e => setSearch(e.target.value)}
         placeholder="Rechercher référence COU/… ou objet…"
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          border: `1.5px solid ${C.bord}`, borderRadius: 10, padding: '9px 14px',
-          fontSize: 13, fontFamily: 'Inter, sans-serif', marginBottom: 10, outline: 'none',
-        }}
+        style={{ width: '100%', boxSizing: 'border-box', border: `1.5px solid ${C.bord}`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontFamily: 'Inter, sans-serif', marginBottom: 10, outline: 'none' }}
       />
 
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12 }}>
@@ -87,11 +85,11 @@ export default function CourriersPage({ courriers, setCourriers, user, navigate 
       </div>
 
       {filtered.length === 0
-        ? <EmptyState icon="✉️" title="Aucun courrier" sub="Modifiez les filtres." />
+        ? <EmptyState icon="✉️" title="Aucun courrier" />
         : filtered.map(c => <CourrierCard key={c.id} c={c} navigate={navigate} />)
       }
 
-      {modalOpen && <NewCourrierModal courriers={courriers} setCourriers={setCourriers} user={user} onClose={() => setModal(false)} />}
+      {modal && <NewCourrierModal courriers={courriers} setCourriers={setCourriers} user={user} onClose={() => setModal(false)} />}
     </div>
   );
 }
@@ -106,8 +104,7 @@ function StatBox({ label, value, color }) {
 }
 
 function CourrierCard({ c, navigate }) {
-  const allStatuts = [...CORR_EMIS_STATUTS, ...CORR_RECU_STATUTS];
-  const st = allStatuts.find(s => s.v === c.statut);
+  const st = [...CORR_EMIS_STATUTS, ...CORR_RECU_STATUTS].find(s => s.v === c.statut);
   return (
     <Card style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => navigate('courrier-detail', { id: c.id })}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -129,6 +126,7 @@ function CourrierCard({ c, navigate }) {
 }
 
 function NewCourrierModal({ courriers, setCourriers, user, onClose }) {
+  const { users } = useStore();
   const [sens, setSens]             = useState('recu');
   const [objet, setObjet]           = useState('');
   const [partenaire, setPartenaire] = useState('');
@@ -138,14 +136,16 @@ function NewCourrierModal({ courriers, setCourriers, user, onClose }) {
   const [dateEm, setDateEm]         = useState(today());
   const [corps, setCorps]           = useState('');
   const [fichierNom, setFichierNom] = useState('');
+  const [saving, setSaving]         = useState(false);
   const [err, setErr] = useState('');
 
-  const canCreateRecu = ROLES_COURRIER_RECU.includes(user.role) || user.role === 'admin';
+  const canCreateRecu  = ROLES_COURRIER_RECU.includes(user.role) || user.role === 'admin';
   const serviceOptions = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 30)}…` }));
-  const userOptions    = USERS.filter(u => u.statut === 'actif').map(u => ({ value: u.id, label: `${u.prenom} ${u.nom} (${ROLES_LABELS[u.role]})` }));
+  const userOptions    = (users.length ? users : []).filter(u => u.statut === 'actif').map(u => ({ value: u.id, label: `${u.prenom} ${u.nom} (${ROLES_LABELS[u.role]})` }));
 
-  const submit = () => {
+  const submit = async () => {
     if (!objet.trim() || !partenaire.trim()) { setErr('Objet et partenaire sont requis.'); return; }
+    setSaving(true);
     const ref = genRef('COU', courriers.map(c => c.reference), dateEm);
     const newC = {
       id: `c${Date.now()}`, reference: ref, sens, objet: objet.trim(),
@@ -156,7 +156,9 @@ function NewCourrierModal({ courriers, setCourriers, user, onClose }) {
       corps: corps.trim(), noteInterne: '', relances: [],
       dateEmission: dateEm, objetDoc: '', fichierNom,
     };
+    await supabase.from('courriers').insert(courrierToDb(newC));
     setCourriers(cs => [newC, ...cs]);
+    setSaving(false);
     onClose();
   };
 
@@ -185,7 +187,7 @@ function NewCourrierModal({ courriers, setCourriers, user, onClose }) {
       <Textarea label="Corps du courrier" value={corps} onChange={setCorps} rows={3} />
       <UploadZone label="Document joint" fichierNom={fichierNom} setFichierNom={setFichierNom} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full>Enregistrer le courrier</Btn>
+      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer le courrier'}</Btn>
     </Modal>
   );
 }

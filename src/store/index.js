@@ -1,34 +1,74 @@
 import { create } from 'zustand';
-import { MOCK_DILIGENCES }  from '../data/mockDiligences';
-import { MOCK_COURRIERS }   from '../data/mockCourriers';
-import { MOCK_INFOS }       from '../data/mockInfos';
-import { MOCK_RAPPORTS }    from '../data/mockRapports';
-import { MOCK_CHARTES }     from '../data/mockChartes';
-import { MOCK_EMISSIONS }   from '../data/mockEmissions';
-import { MOCK_RECETTES }    from '../data/mockRecettes';
-import { PLANNING_CHARTE_INIT, buildCRPlanning } from '../data/plannings';
-import { USERS }            from '../constants/users';
+import { supabase } from '../lib/supabase';
+import {
+  mapUser, mapDiligence, mapCourrier, mapInfo, mapRapport,
+  mapCharte, mapEmission, mapRecette, mapPlanningCharteRows,
+} from '../lib/mappers';
+import { buildCRPlanning } from '../data/plannings';
 
 export const useStore = create((set) => ({
+  // Auth
   user: null,
   setUser: (user) => set({ user }),
 
+  // Navigation
   page: 'dashboard',
   pageParams: {},
   navigate: (page, params = {}) => set({ page, pageParams: params }),
 
-  diligences:     MOCK_DILIGENCES,
-  courriers:      MOCK_COURRIERS,
-  infos:          MOCK_INFOS,
-  rapports:       MOCK_RAPPORTS,
-  chartes:        MOCK_CHARTES,
-  emissions:      MOCK_EMISSIONS,
-  recettes:       MOCK_RECETTES,
-  planningCharte: PLANNING_CHARTE_INIT,
+  // Data (vide au départ, chargé depuis Supabase)
+  diligences:     [],
+  courriers:      [],
+  infos:          [],
+  rapports:       [],
+  chartes:        [],
+  emissions:      [],
+  recettes:       [],
+  planningCharte: {},
   planningCR:     buildCRPlanning(),
   notifications:  [],
-  users:          USERS,
+  users:          [],
+  loading:        true,
 
+  // Chargement initial depuis Supabase
+  initialize: async () => {
+    set({ loading: true });
+    const [
+      { data: dils },
+      { data: cous },
+      { data: infs },
+      { data: raps },
+      { data: chars },
+      { data: emis },
+      { data: recs },
+      { data: usrs },
+      { data: plan },
+    ] = await Promise.all([
+      supabase.from('diligences').select('*').order('date_submission', { ascending: false }),
+      supabase.from('courriers').select('*').order('date_emission', { ascending: false }),
+      supabase.from('infos').select('*').order('date_submission', { ascending: false }),
+      supabase.from('rapports').select('*').order('date_submission', { ascending: false }),
+      supabase.from('chartes').select('*').order('date', { ascending: false }),
+      supabase.from('emissions').select('*').order('date', { ascending: false }),
+      supabase.from('recettes').select('*').order('date', { ascending: false }),
+      supabase.from('utilisateurs').select('*'),
+      supabase.from('planning_charte').select('*').order('mois'),
+    ]);
+    set({
+      diligences:     (dils  || []).map(mapDiligence),
+      courriers:      (cous  || []).map(mapCourrier),
+      infos:          (infs  || []).map(mapInfo),
+      rapports:       (raps  || []).map(mapRapport),
+      chartes:        (chars || []).map(mapCharte),
+      emissions:      (emis  || []).map(mapEmission),
+      recettes:       (recs  || []).map(mapRecette),
+      users:          (usrs  || []).map(mapUser),
+      planningCharte: mapPlanningCharteRows(plan || []),
+      loading:        false,
+    });
+  },
+
+  // Setters locaux (état session)
   setDiligences:     (fn) => set(s => ({ diligences:     typeof fn === 'function' ? fn(s.diligences)     : fn })),
   setCourriers:      (fn) => set(s => ({ courriers:      typeof fn === 'function' ? fn(s.courriers)      : fn })),
   setInfos:          (fn) => set(s => ({ infos:          typeof fn === 'function' ? fn(s.infos)          : fn })),

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useStore } from './store';
 import { canReadEmiRec } from './utils/access';
 
@@ -30,11 +30,13 @@ export default function App() {
     infos, setInfos, rapports, setRapports,
     chartes, setChartes, emissions, setEmissions, recettes, setRecettes,
     planningCharte, setPlanningCharte, planningCR, setPlanningCR,
-    notifications, setNotifications,
+    notifications, setNotifications, initialize,
   } = useStore();
 
   const [splash, setSplash]     = useState(true);
   const [drawerOpen, setDrawer] = useState(false);
+
+  useEffect(() => { initialize(); }, []);
 
   const handleSplashDone = useCallback(() => setSplash(false), []);
   const unread = notifications.filter(n => !n.lu).length;

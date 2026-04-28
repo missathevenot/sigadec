@@ -5,6 +5,8 @@ import { PRINCIPES_VALEURS } from '../../constants/principes';
 import { MOIS_NOMS } from '../../constants/mois';
 import { fmtDate, today } from '../../utils/dates';
 import { MOIS_COURANT } from '../../data/plannings';
+import { supabase } from '../../lib/supabase';
+import { charteToDb } from '../../lib/mappers';
 import Card from '../../components/ui/Card';
 import Btn from '../../components/ui/Btn';
 import Modal from '../../components/ui/Modal';
@@ -154,20 +156,24 @@ function SoumettreModal({ chartes, setChartes, user, onClose }) {
   const [dateSoumis, setDate] = useState(today());
   const [principe, setPrincipe] = useState('');
   const [resume, setResume]   = useState('');
+  const [saving, setSaving]   = useState(false);
   const [err, setErr] = useState('');
 
   const moisOpts    = MOIS_NOMS.map((m, i) => ({ value: String(i+1), label: m }));
   const svcOpts     = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 30)}…` }));
   const principeOpts = PRINCIPES_VALEURS.map(p => ({ value: p, label: p }));
 
-  const submit = () => {
+  const submit = async () => {
     if (!mois || !serviceId || !dateSoumis || !principe) { setErr('Tous les champs obligatoires sont requis.'); return; }
+    setSaving(true);
     const newC = {
       id: `ce${Date.now()}`, mois: Number(mois),
       annee: new Date().getFullYear(), serviceId, principe,
       resume: resume.trim(), auteur: `${user.prenom} ${user.nom}`, date: dateSoumis,
     };
+    await supabase.from('chartes').insert(charteToDb(newC));
     setChartes(cs => [newC, ...cs]);
+    setSaving(false);
     onClose();
   };
 
@@ -183,7 +189,7 @@ function SoumettreModal({ chartes, setChartes, user, onClose }) {
       <Select label="Principes et valeurs" value={principe} onChange={setPrincipe} options={principeOpts} required placeholder="Choisir un principe…" />
       <Textarea label="Commentaire / Résumé" value={resume} onChange={setResume} rows={3} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full>Soumettre</Btn>
+      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Soumettre'}</Btn>
     </Modal>
   );
 }

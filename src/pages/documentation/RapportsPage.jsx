@@ -4,6 +4,8 @@ import { SERVICES } from '../../constants/services';
 import { fmtDate, today } from '../../utils/dates';
 import { matchSearch } from '../../utils/search';
 import { genRef, isoWeek } from '../../utils/refs';
+import { supabase } from '../../lib/supabase';
+import { rapportToDb } from '../../lib/mappers';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Btn from '../../components/ui/Btn';
@@ -138,6 +140,7 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
   const [semaine, setSemaine]     = useState(String(isoWeek(new Date())));
   const [resume, setResume]       = useState('');
   const [fichierNom, setFich]     = useState('');
+  const [saving, setSaving]       = useState(false);
   const [err, setErr] = useState('');
 
   const typeObj    = TYPES.find(t => t.label === type);
@@ -150,8 +153,9 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
   const prefix    = typeObj?.prefix || 'DOC';
   const previewRef = genRef(prefix, rapports.map(r => r.reference), dateSoumis);
 
-  const submit = () => {
+  const submit = async () => {
     if (!objet.trim() || !type || !serviceId) { setErr('Objet, type et service sont requis.'); return; }
+    setSaving(true);
     const newR = {
       id: `r${Date.now()}`, reference: previewRef,
       objet: objet.trim(), titre: objet.trim(), type,
@@ -160,7 +164,9 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
       resume: resume.trim(), dateSubmission: dateSoumis,
       createdAt: new Date().toISOString(),
     };
+    await supabase.from('rapports').insert(rapportToDb(newR));
     setRapports(rs => [newR, ...rs]);
+    setSaving(false);
     onClose();
   };
 
@@ -183,7 +189,7 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
       </div>
       <UploadZone label="Fichier" fichierNom={fichierNom} setFichierNom={setFich} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full>Déposer le document</Btn>
+      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Déposer le document'}</Btn>
     </Modal>
   );
 }

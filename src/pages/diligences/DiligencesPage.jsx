@@ -7,6 +7,9 @@ import { DIL_STATUTS } from '../../constants/statuts';
 import { fmtDate, today } from '../../utils/dates';
 import { matchSearch } from '../../utils/search';
 import { genRef } from '../../utils/refs';
+import { supabase } from '../../lib/supabase';
+import { diligenceToDb } from '../../lib/mappers';
+import { useStore } from '../../store';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Av from '../../components/ui/Av';
@@ -32,6 +35,7 @@ const STATUT_FILTRES = [
 ];
 
 export default function DiligencesPage({ diligences, setDiligences, courriers, user, navigate }) {
+  const { users } = useStore();
   const [search, setSearch]     = useState('');
   const [filtre, setFiltre]     = useState('non_executee');
   const [year, setYear]         = useState(null);
@@ -43,14 +47,8 @@ export default function DiligencesPage({ diligences, setDiligences, courriers, u
       if (!matchSearch(d, search)) return false;
       if (filtre === 'non_executee' && ['executee','supprimee'].includes(d.statut)) return false;
       if (!['all','non_executee'].includes(filtre) && d.statut !== filtre) return false;
-      if (year) {
-        const y = parseInt(d.dateSubmission?.split('-')[0]);
-        if (y !== year) return false;
-      }
-      if (month) {
-        const m = parseInt(d.dateSubmission?.split('-')[1]);
-        if (m !== month) return false;
-      }
+      if (year  && parseInt(d.dateSubmission?.split('-')[0]) !== year)  return false;
+      if (month && parseInt(d.dateSubmission?.split('-')[1]) !== month) return false;
       return true;
     })
     .sort((a, b) => new Date(b.dateSubmission) - new Date(a.dateSubmission));
@@ -69,11 +67,7 @@ export default function DiligencesPage({ diligences, setDiligences, courriers, u
       <input
         value={search} onChange={e => setSearch(e.target.value)}
         placeholder="Rechercher référence DIL/… ou objet…"
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          border: `1.5px solid ${C.bord}`, borderRadius: 10, padding: '9px 14px',
-          fontSize: 13, fontFamily: 'Inter, sans-serif', marginBottom: 10, outline: 'none',
-        }}
+        style={{ width: '100%', boxSizing: 'border-box', border: `1.5px solid ${C.bord}`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontFamily: 'Inter, sans-serif', marginBottom: 10, outline: 'none' }}
       />
 
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 10 }}>
@@ -92,27 +86,21 @@ export default function DiligencesPage({ diligences, setDiligences, courriers, u
       <YearMonthFilter year={year} setYear={setYear} month={month} setMonth={setMonth} />
 
       {filtered.length === 0
-        ? <EmptyState icon="◎" title="Aucune diligence" sub="Modifiez les filtres pour voir plus de résultats." />
-        : filtered.map(d => <DilCard key={d.id} d={d} navigate={navigate} />)
+        ? <EmptyState icon="◎" title="Aucune diligence" sub="Modifiez les filtres." />
+        : filtered.map(d => <DilCard key={d.id} d={d} users={users} navigate={navigate} />)
       }
 
       {modalOpen && (
-        <SubmitModal
-          diligences={diligences}
-          setDiligences={setDiligences}
-          courriers={courriers}
-          user={user}
-          onClose={() => setModalOpen(false)}
-        />
+        <SubmitModal diligences={diligences} setDiligences={setDiligences} courriers={courriers} user={user} onClose={() => setModalOpen(false)} />
       )}
     </div>
   );
 }
 
-function DilCard({ d, navigate }) {
-  const st = DIL_STATUTS.find(s => s.v === d.statut);
-  const assignee = USERS.find(u => u.id === d.assigneA);
-  const svcs = (d.serviceIds || []).map(id => SERVICES.find(s => s.id === id)?.abbr).filter(Boolean);
+function DilCard({ d, users, navigate }) {
+  const st       = DIL_STATUTS.find(s => s.v === d.statut);
+  const assignee = users.find(u => u.id === d.assigneA) || USERS.find(u => u.id === d.assigneA);
+  const svcs     = (d.serviceIds || []).map(id => SERVICES.find(s => s.id === id)?.abbr).filter(Boolean);
 
   return (
     <Card style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => navigate('diligence-detail', { id: d.id })}>
@@ -140,22 +128,22 @@ function DilCard({ d, navigate }) {
 
 function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
   const [intitule, setIntitule]       = useState('');
-  const [fonctionId, setFonctionId]   = useState('');
   const [serviceIds, setServiceIds]   = useState([]);
   const [dateSoumis, setDateSoumis]   = useState(today());
   const [echeance, setEcheance]       = useState('');
   const [description, setDescription] = useState('');
   const [objetDoc, setObjetDoc]       = useState('');
   const [fichierNom, setFichierNom]   = useState('');
-  const [lierCourrier, setLierCourrier] = useState(false);
-  const [courrierIds, setCourrierIds] = useState([]);
+  const [lierCourrier, setLier]       = useState(false);
+  const [courrierIds, setCouIds]      = useState([]);
+  const [saving, setSaving]           = useState(false);
   const [err, setErr] = useState('');
 
-  const roleOptions = Object.entries(ROLES_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const courrierOptions = courriers.map(c => ({ value: c.id, label: `${c.reference} — ${c.objet}` }));
 
-  const submit = () => {
+  const submit = async () => {
     if (!intitule.trim() || !echeance) { setErr('Objet et échéance sont requis.'); return; }
+    setSaving(true);
     const ref = genRef('DIL', diligences.map(d => d.reference), dateSoumis);
     const newDil = {
       id: `dil${Date.now()}`, reference: ref, intitule: intitule.trim(),
@@ -164,14 +152,15 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
       courrierIds: lierCourrier ? courrierIds : [], objetDoc, fichierNom,
       historique: [], dateReport: null, facteursReport: null,
     };
+    await supabase.from('diligences').insert(diligenceToDb(newDil));
     setDiligences(ds => [newDil, ...ds]);
+    setSaving(false);
     onClose();
   };
 
   return (
     <Modal title="Soumettre une diligence" onClose={onClose}>
       <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
-      <Select label="Fonction de l'exécutant" value={fonctionId} onChange={setFonctionId} options={roleOptions} placeholder="Sélectionner…" />
       <MultiSelectService selected={serviceIds} onChange={setServiceIds} label="Service(s) concerné(s)" />
       <Input label="Date de soumission" value={dateSoumis} onChange={setDateSoumis} type="date" required />
       <Input label="Date d'échéance" value={echeance} onChange={setEcheance} type="date" required />
@@ -179,14 +168,12 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
       <Input label="Nature du document" value={objetDoc} onChange={setObjetDoc} />
       <UploadZone label="Téléverser un document" fichierNom={fichierNom} setFichierNom={setFichierNom} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <input type="checkbox" checked={lierCourrier} onChange={e => setLierCourrier(e.target.checked)} id="lierCou" />
+        <input type="checkbox" checked={lierCourrier} onChange={e => setLier(e.target.checked)} id="lierCou" />
         <label htmlFor="lierCou" style={{ fontSize: 13, color: C.txt }}>Lier à un courrier</label>
       </div>
-      {lierCourrier && (
-        <Select label="Courrier lié" value={courrierIds[0] || ''} onChange={v => setCourrierIds(v ? [v] : [])} options={courrierOptions} placeholder="Choisir un courrier…" />
-      )}
+      {lierCourrier && <Select label="Courrier lié" value={courrierIds[0] || ''} onChange={v => setCouIds(v ? [v] : [])} options={courrierOptions} placeholder="Choisir un courrier…" />}
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full>Soumettre la diligence</Btn>
+      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Soumettre la diligence'}</Btn>
     </Modal>
   );
 }

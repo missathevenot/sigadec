@@ -2,6 +2,7 @@ import { C } from '../../constants/colors';
 import { ROLES_LABELS } from '../../constants/roles';
 import { SERVICES } from '../../constants/services';
 import { useStore } from '../../store';
+import { supabase } from '../../lib/supabase';
 import Av from '../../components/ui/Av';
 import Btn from '../../components/ui/Btn';
 import Card from '../../components/ui/Card';
@@ -15,15 +16,23 @@ export default function AdminPage() {
   const enAttente = users.filter(u => u.statut === 'en_attente');
   const actifs    = users.filter(u => u.statut === 'actif');
 
-  const valider = (id) => setUsers(us => us.map(u => u.id === id ? { ...u, statut: 'actif' } : u));
-  const rejeter = (id) => {
+  const valider = async (id) => {
+    await supabase.from('utilisateurs').update({ statut: 'actif' }).eq('id', id);
+    setUsers(us => us.map(u => u.id === id ? { ...u, statut: 'actif' } : u));
+  };
+  const rejeter = async (id) => {
     if (window.confirm('Rejeter et supprimer ce compte ?')) {
+      await supabase.from('utilisateurs').delete().eq('id', id);
       setUsers(us => us.filter(u => u.id !== id));
     }
   };
-  const suspendre = (id) => setUsers(us => us.map(u => u.id === id ? { ...u, statut: 'en_attente' } : u));
-  const supprimer = (id) => {
+  const suspendre = async (id) => {
+    await supabase.from('utilisateurs').update({ statut: 'en_attente' }).eq('id', id);
+    setUsers(us => us.map(u => u.id === id ? { ...u, statut: 'en_attente' } : u));
+  };
+  const supprimer = async (id) => {
     if (window.confirm('Supprimer définitivement ce compte ?')) {
+      await supabase.from('utilisateurs').delete().eq('id', id);
       setUsers(us => us.filter(u => u.id !== id));
     }
   };

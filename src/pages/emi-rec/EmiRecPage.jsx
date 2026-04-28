@@ -4,6 +4,8 @@ import { canWriteEmissions, canWriteRecettes } from '../../utils/access';
 import { fmtDate, today } from '../../utils/dates';
 import { matchSearch } from '../../utils/search';
 import { genRef } from '../../utils/refs';
+import { supabase } from '../../lib/supabase';
+import { emissionToDb, recetteToDb } from '../../lib/mappers';
 import Card from '../../components/ui/Card';
 import Btn from '../../components/ui/Btn';
 import Modal from '../../components/ui/Modal';
@@ -100,19 +102,25 @@ function AddModal({ isEmi, data, setData, user, onClose }) {
   const [date, setDate]           = useState(today());
   const [description, setDesc]    = useState('');
   const [fichierNom, setFich]     = useState('');
+  const [saving, setSaving]       = useState(false);
   const [err, setErr] = useState('');
 
   const prefix = isEmi ? 'EMI' : 'REC';
 
-  const submit = () => {
+  const submit = async () => {
     if (!objet.trim()) { setErr("L'objet est requis."); return; }
+    setSaving(true);
     const ref = genRef(prefix, data.map(d => d.reference), date);
     const newEntry = {
       id: `${prefix.toLowerCase()}${Date.now()}`, reference: ref,
       objet: objet.trim(), date, description: description.trim(),
       fichierNom, auteurId: user.id,
     };
+    const table = isEmi ? 'emissions' : 'recettes';
+    const toDb  = isEmi ? emissionToDb : recetteToDb;
+    await supabase.from(table).insert(toDb(newEntry));
     setData(ds => [newEntry, ...ds]);
+    setSaving(false);
     onClose();
   };
 
@@ -123,7 +131,7 @@ function AddModal({ isEmi, data, setData, user, onClose }) {
       <Textarea label="Description" value={description} onChange={setDesc} rows={3} />
       <UploadZone label="Fichier" fichierNom={fichierNom} setFichierNom={setFich} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full>Enregistrer</Btn>
+      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Btn>
     </Modal>
   );
 }
