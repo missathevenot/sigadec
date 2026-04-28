@@ -1,0 +1,14 @@
+{
+  "name": "SIGADEC — DGI Cadastre CI",
+  "short_name": "SIGADEC",
+  "description": "Système Intégré de Gestion Administrative et Décisionnelle du Cadastre",
+  "start_url": "/sigadec/",
+  "display": "standalone",
+  "background_color": "#145C2E",
+  "theme_color": "#1B7A3E",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/sigadec/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/sigadec/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,17 @@
+export const SERVICES = [
+  { id:'s0',  nom:"Service des Applicatifs et de la Fiscalité Immobilière et Cadastrales (SAFIC)", sd:"Dir. des Systèmes d'Information",       chefId:'u9',  abbr:'SAFIC' },
+  { id:'s1',  nom:'Service Prospection & Suivi-Évaluation Travaux cadastraux',                     sd:'Direction du Cadastre',                  chefId:'u10', abbr:'SPSE'  },
+  { id:'s2',  nom:'Service des Études & Statistiques cadastrales',                                 sd:'Direction du Cadastre',                  chefId:'u11', abbr:'SESC'  },
+  { id:'s3',  nom:"Service de la Coordination des Opérations d'assiette",                          sd:'SD Assiette & Contrôle',                 chefId:'u12', abbr:'SCOA'  },
+  { id:'s4',  nom:"Service d'Appui au Recouvrement",                                               sd:'SD Assiette & Contrôle',                 chefId:'u13', abbr:'SAR'   },
+  { id:'s5',  nom:'Service des Réformes & Contentieux',                                            sd:'SD Assiette & Contrôle',                 chefId:'u14', abbr:'SRC'   },
+  { id:'s6',  nom:'Service de la Coordination des Travaux fonciers',                               sd:'SD Production foncière',                 chefId:'u15', abbr:'SCTF'  },
+  { id:'s7',  nom:'Service de la Coordination Activités foncières rurales',                        sd:'SD Production foncière',                 chefId:'u16', abbr:'SCAFR' },
+  { id:'s8',  nom:"Service de l'Équipement & de la Production",                                    sd:'SD Production foncière',                 chefId:'u17', abbr:'SEP'   },
+  { id:'s9',  nom:'Service de la Documentation & Info. cadastrale',                                sd:'SD Information cadastrale',              chefId:'u18', abbr:'SDIC'  },
+  { id:'s10', nom:'Service Suivi Projets digitaux & Dév. applicatifs',                             sd:'SD Information cadastrale',              chefId:'u19', abbr:'SSPDA' },
+  { id:'s11', nom:'Service du Cadastre des Réseaux',                                               sd:'SD Information cadastrale',              chefId:'u20', abbr:'SCR'   },
+  { id:'s12', nom:'Service des Évaluations immobilières',                                          sd:'SD Évaluation & Expertise',              chefId:'u21', abbr:'SEI'   },
+  { id:'s13', nom:'Service des Enquêtes foncières & Recouvrement',                                 sd:'SD Évaluation & Expertise',              chefId:'u22', abbr:'SEFR'  },
+  { id:'s14', nom:'Service des Valeurs cadastrales de référence',                                  sd:'SD Évaluation & Expertise',              chefId:'u23', abbr:'SVCR'  },
+];
