@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useStore } from './store';
+import { useResponsive } from './hooks/useResponsive';
 import { canReadEmiRec } from './utils/access';
 
 import SplashScreen    from './components/layout/SplashScreen';
 import TopBar          from './components/layout/TopBar';
 import BottomNav       from './components/layout/BottomNav';
+import SideNav         from './components/layout/SideNav';
 import AppDrawer       from './components/layout/AppDrawer';
 import AuthFlow        from './pages/auth/AuthFlow';
 
@@ -33,8 +35,9 @@ export default function App() {
     notifications, setNotifications, initialize,
   } = useStore();
 
-  const [splash, setSplash]     = useState(true);
-  const [drawerOpen, setDrawer] = useState(false);
+  const { isMobile }              = useResponsive();
+  const [splash, setSplash]       = useState(true);
+  const [drawerOpen, setDrawer]   = useState(false);
 
   useEffect(() => { initialize(); }, []);
 
@@ -51,49 +54,86 @@ export default function App() {
 
   const sp = { user, planningCharte, setPlanningCharte, planningCR, setPlanningCR };
 
-  return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh', maxWidth: 430, margin: '0 auto', position: 'relative' }}>
-      {drawerOpen && (
-        <div
-          onClick={() => setDrawer(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 40, maxWidth: 430, margin: '0 auto' }}
+  const pages = (
+    <>
+      {page === 'dashboard'          && <Dashboard {...sp} diligences={diligences} rapports={rapports} chartes={chartes} courriers={courriers} notifications={notifications} infos={infos} emissions={emissions} recettes={recettes} navigate={navigate} />}
+      {page === 'mon-espace'         && <MonEspace {...sp} diligences={diligences} rapports={rapports} chartes={chartes} courriers={courriers} infos={infos} emissions={emissions} recettes={recettes} navigate={navigate} />}
+      {page === 'infos'              && <InfosPage infos={infos} setInfos={setInfos} diligences={diligences} setDiligences={setDiligences} user={user} navigate={navigate} />}
+      {page === 'diligences'         && user.role !== 'secretariat' && <DiligencesPage diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
+      {page === 'diligence-detail'   && user.role !== 'secretariat' && <DiligenceDetail diligence={diligences.find(d => d.id === pageParams.id)} diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
+      {page === 'rapports'           && <RapportsPage rapports={rapports} setRapports={setRapports} user={user} />}
+      {page === 'chartes'            && user.role !== 'secretariat' && <ChartesPage chartes={chartes} setChartes={setChartes} user={user} planningCharte={planningCharte} setPlanningCharte={setPlanningCharte} />}
+      {page === 'planning'           && user.role !== 'secretariat' && <PlanningPage {...sp} />}
+      {page === 'courriers'          && <CourriersPage courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
+      {page === 'courrier-detail'    && <CourrierDetail courrier={courriers.find(c => c.id === pageParams.id)} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
+      {page === 'emi-rec'            && canReadEmiRec(user) && <EmiRecPage user={user} emissions={emissions} setEmissions={setEmissions} recettes={recettes} setRecettes={setRecettes} />}
+      {page === 'notifications'      && <NotificationsPage notifications={notifications} setNotifications={setNotifications} />}
+      {page === 'profile'            && <ProfilePage user={user} />}
+      {page === 'admin'              && ['admin','directeur'].includes(user.role) && <AdminPage />}
+    </>
+  );
+
+  /* ── Layout MOBILE ── */
+  if (isMobile) {
+    return (
+      <div style={{ background: '#F4F6F9', minHeight: '100vh', maxWidth: 430, margin: '0 auto', position: 'relative' }}>
+        {drawerOpen && (
+          <div
+            onClick={() => setDrawer(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 40, maxWidth: 430, margin: '0 auto' }}
+          />
+        )}
+        <AppDrawer
+          open={drawerOpen}
+          user={user}
+          navigate={navigate}
+          onClose={() => setDrawer(false)}
+          onLogout={handleLogout}
+          currentPage={page}
         />
-      )}
+        <TopBar
+          page={page}
+          unread={unread}
+          onMenu={() => setDrawer(true)}
+          onBell={() => navigate('notifications')}
+          isMobile={true}
+        />
+        <main style={{ overflowY: 'auto', paddingBottom: 72, paddingTop: 58 }}>
+          {pages}
+        </main>
+        <BottomNav page={page} navigate={navigate} user={user} />
+      </div>
+    );
+  }
 
-      <AppDrawer
-        open={drawerOpen}
-        user={user}
-        navigate={navigate}
-        onClose={() => setDrawer(false)}
-        onLogout={handleLogout}
-        currentPage={page}
-      />
-
+  /* ── Layout DESKTOP ── */
+  return (
+    <div style={{ background: '#F4F6F9', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar
         page={page}
         unread={unread}
-        onMenu={() => setDrawer(true)}
         onBell={() => navigate('notifications')}
+        isMobile={false}
       />
-
-      <main style={{ overflowY: 'auto', paddingBottom: 72, paddingTop: 58 }}>
-        {page === 'dashboard'          && <Dashboard {...sp} diligences={diligences} rapports={rapports} chartes={chartes} courriers={courriers} notifications={notifications} infos={infos} emissions={emissions} recettes={recettes} navigate={navigate} />}
-        {page === 'mon-espace'         && <MonEspace {...sp} diligences={diligences} rapports={rapports} chartes={chartes} courriers={courriers} infos={infos} emissions={emissions} recettes={recettes} navigate={navigate} />}
-        {page === 'infos'              && <InfosPage infos={infos} setInfos={setInfos} diligences={diligences} setDiligences={setDiligences} user={user} navigate={navigate} />}
-        {page === 'diligences'         && user.role !== 'secretariat' && <DiligencesPage diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
-        {page === 'diligence-detail'   && user.role !== 'secretariat' && <DiligenceDetail diligence={diligences.find(d => d.id === pageParams.id)} diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
-        {page === 'rapports'           && <RapportsPage rapports={rapports} setRapports={setRapports} user={user} />}
-        {page === 'chartes'            && user.role !== 'secretariat' && <ChartesPage chartes={chartes} setChartes={setChartes} user={user} planningCharte={planningCharte} setPlanningCharte={setPlanningCharte} />}
-        {page === 'planning'           && user.role !== 'secretariat' && <PlanningPage {...sp} />}
-        {page === 'courriers'          && <CourriersPage courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
-        {page === 'courrier-detail'    && <CourrierDetail courrier={courriers.find(c => c.id === pageParams.id)} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
-        {page === 'emi-rec'            && canReadEmiRec(user) && <EmiRecPage user={user} emissions={emissions} setEmissions={setEmissions} recettes={recettes} setRecettes={setRecettes} />}
-        {page === 'notifications'      && <NotificationsPage notifications={notifications} setNotifications={setNotifications} />}
-        {page === 'profile'            && <ProfilePage user={user} />}
-        {page === 'admin'              && ['admin','directeur'].includes(user.role) && <AdminPage />}
-      </main>
-
-      <BottomNav page={page} navigate={navigate} user={user} />
+      <div style={{ display: 'flex', flex: 1, paddingTop: 58 }}>
+        <SideNav
+          user={user}
+          navigate={navigate}
+          currentPage={page}
+          onLogout={handleLogout}
+          unread={unread}
+        />
+        <main style={{
+          flex: 1,
+          marginLeft: 240,
+          minHeight: 'calc(100vh - 58px)',
+          overflowY: 'auto',
+        }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 8px' }}>
+            {pages}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

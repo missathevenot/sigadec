@@ -18,20 +18,40 @@ const PAGE_TITLES = {
   admin:              'Administration',
 };
 
-export default function TopBar({ page, unread = 0, onMenu, onBell }) {
+export default function TopBar({ page, unread = 0, onMenu, onBell, isMobile = true }) {
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, maxWidth: 430, margin: '0 auto',
+      position: 'fixed', top: 0, left: 0, right: 0,
+      ...(isMobile ? { maxWidth: 430, margin: '0 auto' } : {}),
       height: 58, background: C.vertF,
-      display: 'flex', alignItems: 'center', paddingInline: 14, gap: 12,
+      display: 'flex', alignItems: 'center',
+      paddingInline: isMobile ? 14 : 24, gap: 12,
       zIndex: 50, boxShadow: '0 2px 8px rgba(0,0,0,.18)',
     }}>
-      <button onClick={onMenu} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: C.blanc, fontSize: 22 }}>☰</button>
-      <Logo size={34} />
+      {isMobile && (
+        <button onClick={onMenu} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: C.blanc, fontSize: 22 }}>☰</button>
+      )}
+      <Logo size={isMobile ? 34 : 38} />
       <span style={{
-        flex: 1, color: C.blanc, fontFamily: 'Nunito, sans-serif',
-        fontWeight: 800, fontSize: 15, overflow: 'hidden',
-        textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        color: C.blanc, fontFamily: 'Nunito, sans-serif',
+        fontWeight: 900, fontSize: isMobile ? 15 : 17,
+        marginRight: isMobile ? 0 : 8,
+      }}>
+        SIGADEC
+      </span>
+      {!isMobile && (
+        <span style={{
+          color: 'rgba(255,255,255,.6)', fontSize: 13,
+          borderLeft: '1px solid rgba(255,255,255,.3)', paddingLeft: 12,
+        }}>
+          Direction du Cadastre — DGI CI
+        </span>
+      )}
+      <span style={{
+        flex: 1, color: 'rgba(255,255,255,.85)', fontFamily: 'Inter, sans-serif',
+        fontWeight: 600, fontSize: isMobile ? 14 : 15,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        textAlign: isMobile ? 'left' : 'right', paddingRight: isMobile ? 0 : 8,
       }}>
         {PAGE_TITLES[page] || 'SIGADEC'}
       </span>
