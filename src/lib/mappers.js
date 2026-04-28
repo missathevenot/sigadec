@@ -2,6 +2,7 @@
 export const mapUser = (u) => ({
   id: u.id, prenom: u.prenom, nom: u.nom, email: u.email,
   role: u.role, serviceId: u.service_id, statut: u.statut,
+  motDePasse: u.mot_de_passe || null,
 });
 
 export const mapDiligence = (d) => ({

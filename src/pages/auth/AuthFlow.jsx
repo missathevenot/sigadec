@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import bcrypt from 'bcryptjs';
 import { C } from '../../constants/colors';
 import { ROLES_LABELS, ROLES_SANS_SERVICE } from '../../constants/roles';
 import { SERVICES } from '../../constants/services';
@@ -16,7 +17,12 @@ export default function AuthFlow() {
   const { setUser, setNotifications, diligences, setUsers, users } = useStore();
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, maxWidth: 430, margin: '0 auto' }}>
+    <div style={{
+      minHeight: '100vh', background: C.bg,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: 20, maxWidth: 430, margin: '0 auto',
+    }}>
       {view === 'login'    && <LoginView onRegister={() => setView('register')} setUser={setUser} setNotifications={setNotifications} diligences={diligences} users={users} />}
       {view === 'register' && <RegisterView onBack={() => setView('login')} onDone={() => setView('confirm')} setUsers={setUsers} users={users} />}
       {view === 'confirm'  && <ConfirmView onBack={() => setView('login')} />}
@@ -24,10 +30,12 @@ export default function AuthFlow() {
   );
 }
 
-function LoginView({ onRegister, setUser, setNotifications, diligences, users }) {
-  const [email, setEmail] = useState('');
-  const [err, setErr]     = useState('');
-  const [loading, setLoading] = useState(false);
+function LoginView({ onRegister, setUser, setNotifications, diligences }) {
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [needPwd, setNeedPwd]   = useState(false);
+  const [err, setErr]           = useState('');
+  const [loading, setLoading]   = useState(false);
 
   const login = async () => {
     setLoading(true);
@@ -41,6 +49,19 @@ function LoginView({ onRegister, setUser, setNotifications, diligences, users })
 
       if (error || !data) { setErr('Adresse email inconnue.'); return; }
       if (data.statut !== 'actif') { setErr('Ce compte est en attente de validation.'); return; }
+
+      // Si le compte a un mot de passe, on le vérifie
+      if (data.mot_de_passe) {
+        if (!needPwd) {
+          // Première passe : afficher le champ mot de passe
+          setNeedPwd(true);
+          setLoading(false);
+          return;
+        }
+        if (!password.trim()) { setErr('Mot de passe requis.'); return; }
+        const ok = await bcrypt.compare(password, data.mot_de_passe);
+        if (!ok) { setErr('Mot de passe incorrect.'); return; }
+      }
 
       const u = mapUser(data);
       const alerts = buildDailyAlerts(diligences, u);
@@ -60,33 +81,53 @@ function LoginView({ onRegister, setUser, setNotifications, diligences, users })
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 26, color: C.vert, marginTop: 12 }}>SIGADEC</div>
         <div style={{ fontSize: 12, color: C.sec, marginTop: 4 }}>Direction du Cadastre — DGI CI</div>
       </div>
+
       <div style={{ background: C.blanc, borderRadius: 14, padding: '24px 20px', boxShadow: '0 1px 6px rgba(0,0,0,.07)' }}>
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 18, color: C.txt, marginBottom: 18 }}>Connexion</div>
-        <Input label="Adresse email professionnelle" value={email} onChange={setEmail} type="email" placeholder="votre.email@cadastre.dgi.ci" required />
+
+        <Input
+          label="Adresse email"
+          value={email}
+          onChange={(v) => { setEmail(v); setNeedPwd(false); setErr(''); }}
+          type="email"
+          placeholder="votre.email@..."
+          required
+        />
+
+        {needPwd && (
+          <Input
+            label="Mot de passe"
+            value={password}
+            onChange={setPassword}
+            type="password"
+            placeholder="••••••••"
+            required
+          />
+        )}
+
         {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-        <Btn onClick={login} full disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</Btn>
+
+        <Btn onClick={login} full disabled={loading}>
+          {loading ? 'Connexion…' : needPwd ? 'Valider le mot de passe' : 'Se connecter'}
+        </Btn>
+
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.sec }}>
           Pas encore de compte ?{' '}
           <span onClick={onRegister} style={{ color: C.vert, fontWeight: 700, cursor: 'pointer' }}>S'inscrire</span>
         </div>
       </div>
-      <div style={{ marginTop: 16, padding: '12px 14px', background: C.vertL, borderRadius: 10, fontSize: 11, color: C.sec }}>
-        <strong>Comptes démo :</strong><br/>
-        directeur@cadastre.dgi.ci · admin@cadastre.dgi.ci<br/>
-        chef.scoa@cadastre.dgi.ci · secretariat@cadastre.dgi.ci
-      </div>
     </div>
   );
 }
 
-function RegisterView({ onBack, onDone, setUsers, users }) {
-  const [prenom, setPrenom] = useState('');
-  const [nom, setNom]       = useState('');
-  const [email, setEmail]   = useState('');
-  const [role, setRole]     = useState('');
-  const [serviceId, setSvc] = useState('');
-  const [err, setErr]       = useState('');
-  const [loading, setLoading] = useState(false);
+function RegisterView({ onBack, onDone, setUsers }) {
+  const [prenom, setPrenom]     = useState('');
+  const [nom, setNom]           = useState('');
+  const [email, setEmail]       = useState('');
+  const [role, setRole]         = useState('');
+  const [serviceId, setSvc]     = useState('');
+  const [err, setErr]           = useState('');
+  const [loading, setLoading]   = useState(false);
 
   const roleOptions    = Object.entries(ROLES_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const serviceOptions = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 35)}…` }));
