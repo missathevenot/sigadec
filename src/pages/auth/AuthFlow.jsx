@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import bcrypt from 'bcryptjs';
 import { C } from '../../constants/colors';
 import { ROLES_LABELS, ROLES_SANS_SERVICE } from '../../constants/roles';
@@ -7,6 +7,7 @@ import { useStore } from '../../store';
 import { buildDailyAlerts } from '../../utils/alerts';
 import { supabase } from '../../lib/supabase';
 import { mapUser, userToDb } from '../../lib/mappers';
+import { compressImage } from '../../utils/imageUtils';
 import Logo from '../../components/ui/Logo';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -121,17 +122,30 @@ function LoginView({ onRegister, setUser, setNotifications, diligences }) {
 }
 
 function RegisterView({ onBack, onDone, setUsers }) {
-  const [prenom, setPrenom]     = useState('');
-  const [nom, setNom]           = useState('');
-  const [email, setEmail]       = useState('');
-  const [role, setRole]         = useState('');
-  const [serviceId, setSvc]     = useState('');
-  const [err, setErr]           = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [prenom, setPrenom]       = useState('');
+  const [nom, setNom]             = useState('');
+  const [email, setEmail]         = useState('');
+  const [role, setRole]           = useState('');
+  const [serviceId, setSvc]       = useState('');
+  const [photoBlob, setPhotoBlob] = useState(null);
+  const [photoPreview, setPhotoP] = useState(null);
+  const [err, setErr]             = useState('');
+  const [loading, setLoading]     = useState(false);
+  const fileRef                   = useRef(null);
 
   const roleOptions    = Object.entries(ROLES_LABELS).map(([v, l]) => ({ value: v, label: l }));
   const serviceOptions = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 35)}…` }));
   const needService    = role && !ROLES_SANS_SERVICE.includes(role);
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setErr('Fichier image requis.'); return; }
+    const blob = await compressImage(file);
+    setPhotoBlob(blob);
+    setPhotoP(URL.createObjectURL(blob));
+    setErr('');
+  };
 
   const submit = async () => {
     if (!prenom.trim() || !nom.trim() || !email.trim() || !role) { setErr('Tous les champs obligatoires sont requis.'); return; }
@@ -140,10 +154,25 @@ function RegisterView({ onBack, onDone, setUsers }) {
     setLoading(true);
     setErr('');
     try {
+      const tempId = `u${Date.now()}`;
+      let photoUrl = null;
+
+      if (photoBlob) {
+        const path = `${tempId}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from('avatars')
+          .upload(path, photoBlob, { upsert: true, contentType: 'image/jpeg' });
+        if (!upErr) {
+          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+          photoUrl = publicUrl;
+        }
+      }
+
       const newUser = {
-        id: `u${Date.now()}`, prenom: prenom.trim(), nom: nom.trim(),
+        id: tempId, prenom: prenom.trim(), nom: nom.trim(),
         email: email.trim().toLowerCase(), role,
-        serviceId: needService ? serviceId : null, statut: 'en_attente',
+        serviceId: needService ? serviceId : null,
+        statut: 'en_attente', photoUrl,
       };
       const { error } = await supabase.from('utilisateurs').insert(userToDb(newUser));
       if (error) { setErr('Cet email est déjà utilisé ou une erreur est survenue.'); return; }
@@ -160,6 +189,27 @@ function RegisterView({ onBack, onDone, setUsers }) {
     <div style={{ width: '100%' }}>
       <div style={{ background: C.blanc, borderRadius: 14, padding: '24px 20px', boxShadow: '0 1px 6px rgba(0,0,0,.07)' }}>
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 18, color: C.txt, marginBottom: 18 }}>Demande d'inscription</div>
+
+        {/* Photo optionnelle */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16 }}>
+          <div
+            onClick={() => fileRef.current?.click()}
+            style={{
+              width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
+              background: C.vertL, border: `2px dashed ${C.vert}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            {photoPreview
+              ? <img src={photoPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ fontSize: 28 }}>📷</span>
+            }
+          </div>
+          <span style={{ fontSize: 11, color: C.sec, marginTop: 6 }}>Photo de profil (optionnelle)</span>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
+        </div>
+
         <Input label="Prénom" value={prenom} onChange={setPrenom} required />
         <Input label="Nom" value={nom} onChange={setNom} required />
         <Input label="Email professionnel" value={email} onChange={setEmail} type="email" required />

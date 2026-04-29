@@ -4,7 +4,7 @@ import { useResponsive } from './hooks/useResponsive';
 import { canReadEmiRec } from './utils/access';
 
 import SplashScreen    from './components/layout/SplashScreen';
-import TopBar          from './components/layout/TopBar';
+import TopBar, { TOP_BAR_HEIGHT } from './components/layout/TopBar';
 import BottomNav       from './components/layout/BottomNav';
 import SideNav         from './components/layout/SideNav';
 import AppDrawer       from './components/layout/AppDrawer';
@@ -16,7 +16,6 @@ import DiligencesPage  from './pages/diligences/DiligencesPage';
 import DiligenceDetail from './pages/diligences/DiligenceDetail';
 import InfosPage       from './pages/infos/InfosPage';
 import RapportsPage    from './pages/documentation/RapportsPage';
-import ChartesPage     from './pages/chartes/ChartesPage';
 import PlanningPage    from './pages/planning/PlanningPage';
 import CourriersPage   from './pages/courriers/CourriersPage';
 import CourrierDetail  from './pages/courriers/CourrierDetail';
@@ -62,8 +61,7 @@ export default function App() {
       {page === 'diligences'         && user.role !== 'secretariat' && <DiligencesPage diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
       {page === 'diligence-detail'   && user.role !== 'secretariat' && <DiligenceDetail diligence={diligences.find(d => d.id === pageParams.id)} diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
       {page === 'rapports'           && <RapportsPage rapports={rapports} setRapports={setRapports} user={user} />}
-      {page === 'chartes'            && user.role !== 'secretariat' && <ChartesPage chartes={chartes} setChartes={setChartes} user={user} planningCharte={planningCharte} setPlanningCharte={setPlanningCharte} />}
-      {page === 'planning'           && user.role !== 'secretariat' && <PlanningPage {...sp} />}
+      {page === 'planning'           && user.role !== 'secretariat' && <PlanningPage {...sp} rapports={rapports} />}
       {page === 'courriers'          && <CourriersPage courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
       {page === 'courrier-detail'    && <CourrierDetail courrier={courriers.find(c => c.id === pageParams.id)} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
       {page === 'emi-rec'            && canReadEmiRec(user) && <EmiRecPage user={user} emissions={emissions} setEmissions={setEmissions} recettes={recettes} setRecettes={setRecettes} />}
@@ -98,7 +96,7 @@ export default function App() {
           onBell={() => navigate('notifications')}
           isMobile={true}
         />
-        <main style={{ overflowY: 'auto', paddingBottom: 72, paddingTop: 58 }}>
+        <main style={{ overflowY: 'auto', paddingBottom: 72, paddingTop: TOP_BAR_HEIGHT }}>
           {pages}
         </main>
         <BottomNav page={page} navigate={navigate} user={user} />
@@ -115,7 +113,7 @@ export default function App() {
         onBell={() => navigate('notifications')}
         isMobile={false}
       />
-      <div style={{ display: 'flex', flex: 1, paddingTop: 58 }}>
+      <div style={{ display: 'flex', flex: 1, paddingTop: TOP_BAR_HEIGHT }}>
         <SideNav
           user={user}
           navigate={navigate}

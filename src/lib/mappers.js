@@ -3,6 +3,7 @@ export const mapUser = (u) => ({
   id: u.id, prenom: u.prenom, nom: u.nom, email: u.email,
   role: u.role, serviceId: u.service_id, statut: u.statut,
   motDePasse: u.mot_de_passe || null,
+  photoUrl: u.photo_url || null,
 });
 
 export const mapDiligence = (d) => ({
@@ -62,7 +63,22 @@ export const mapPlanningCharteRows = (rows) => {
   (rows || []).forEach(r => {
     plan[r.mois] = {
       mois: r.mois_nom, serviceId: r.service_id,
-      chefId: r.chef_id, soumis: r.soumis, dateSoumis: r.date_soumis,
+      chefId: r.chef_id, soumis: r.soumis || false,
+      dateSoumis: r.date_soumis,
+      principe: r.principe || '',
+    };
+  });
+  return plan;
+};
+
+export const mapPlanningCRRows = (rows, basePlan) => {
+  const plan = { ...basePlan };
+  (rows || []).forEach(r => {
+    plan[r.semaine] = {
+      ...plan[r.semaine],
+      serviceId:   r.service_id  || plan[r.semaine]?.serviceId,
+      datePrevue:  r.date_prevue || null,
+      description: r.description || '',
     };
   });
   return plan;
@@ -122,4 +138,5 @@ export const recetteToDb = (r) => ({
 export const userToDb = (u) => ({
   id: u.id, prenom: u.prenom, nom: u.nom, email: u.email,
   role: u.role, service_id: u.serviceId, statut: u.statut,
+  photo_url: u.photoUrl || null,
 });

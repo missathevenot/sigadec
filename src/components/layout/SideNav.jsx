@@ -2,6 +2,7 @@ import { C } from '../../constants/colors';
 import { ROLES_LABELS } from '../../constants/roles';
 import { SERVICES } from '../../constants/services';
 import { canReadEmiRec } from '../../utils/access';
+import { TOP_BAR_HEIGHT } from './TopBar';
 import Av from '../ui/Av';
 
 const MENU_ITEMS = [
@@ -11,7 +12,6 @@ const MENU_ITEMS = [
   { id: 'courriers',     icon: '✉️',  label: 'Courriers' },
   { id: 'infos',         icon: '📋', label: 'Informations / Divers' },
   { id: 'rapports',      icon: '📄', label: 'Documentation' },
-  { id: 'chartes',       icon: '⚖️',  label: 'Charte Éthique',       hideFor: ['secretariat'] },
   { id: 'planning',      icon: '📅', label: 'Planning Annuel',       hideFor: ['secretariat'] },
   { id: 'emi-rec',       icon: '💰', label: 'Émissions / Recettes',  emiRec: true },
   { id: 'notifications', icon: '🔔', label: 'Notifications' },
@@ -41,7 +41,7 @@ export default function SideNav({ user, navigate, currentPage, onLogout, unread 
 
   return (
     <div style={{
-      position: 'fixed', top: 58, left: 0, bottom: 0,
+      position: 'fixed', top: TOP_BAR_HEIGHT, left: 0, bottom: 0,
       width: 240, background: C.blanc,
       borderRight: `1px solid ${C.bord}`,
       display: 'flex', flexDirection: 'column',

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import {
   mapUser, mapDiligence, mapCourrier, mapInfo, mapRapport,
-  mapCharte, mapEmission, mapRecette, mapPlanningCharteRows,
+  mapCharte, mapEmission, mapRecette, mapPlanningCharteRows, mapPlanningCRRows,
 } from '../lib/mappers';
 import { buildCRPlanning } from '../data/plannings';
 
@@ -43,6 +43,7 @@ export const useStore = create((set) => ({
       { data: recs },
       { data: usrs },
       { data: plan },
+      { data: plan_cr },
     ] = await Promise.all([
       supabase.from('diligences').select('*').order('date_submission', { ascending: false }),
       supabase.from('courriers').select('*').order('date_emission', { ascending: false }),
@@ -53,7 +54,9 @@ export const useStore = create((set) => ({
       supabase.from('recettes').select('*').order('date', { ascending: false }),
       supabase.from('utilisateurs').select('*'),
       supabase.from('planning_charte').select('*').order('mois'),
+      supabase.from('planning_cr').select('*').order('semaine'),
     ]);
+    const base = buildCRPlanning();
     set({
       diligences:     (dils  || []).map(mapDiligence),
       courriers:      (cous  || []).map(mapCourrier),
@@ -64,6 +67,7 @@ export const useStore = create((set) => ({
       recettes:       (recs  || []).map(mapRecette),
       users:          (usrs  || []).map(mapUser),
       planningCharte: mapPlanningCharteRows(plan || []),
+      planningCR:     mapPlanningCRRows(plan_cr || [], base),
       loading:        false,
     });
   },

@@ -19,15 +19,16 @@ import YearMonthFilter from '../../components/shared/YearMonthFilter';
 import { MOIS_NOMS } from '../../constants/mois';
 
 const TYPES = [
-  { label: 'Rapport hebdomadaire de service',   prefix: 'RHE', hebdo: true },
-  { label: "Rapport d'activité trimestriel",     prefix: 'RAT' },
-  { label: "Rapport d'activité semestriel",      prefix: 'RAS' },
-  { label: "Rapport d'activité annuel",          prefix: 'RAA' },
-  { label: 'Compte-rendu de réunion du comité',  prefix: 'CR' },
-  { label: 'Note de service',                    prefix: 'NSER' },
-  { label: "Note d'information",                 prefix: 'NINF' },
-  { label: 'Rapport de mission',                 prefix: 'DOC' },
-  { label: 'Autre',                              prefix: 'DOC', autre: true },
+  { label: 'Autre',                                   prefix: 'DOC', autre: true },
+  { label: "Commentaire de la Charte d'Ethique",      prefix: 'CHA' },
+  { label: 'Compte-rendu de réunion du comité',       prefix: 'CR' },
+  { label: "Note d'information",                      prefix: 'NINF' },
+  { label: 'Note de service',                         prefix: 'NSER' },
+  { label: "Rapport d'activités annuel",              prefix: 'RAA' },
+  { label: "Rapport d'activités semestriel",          prefix: 'RAS' },
+  { label: "Rapport d'activités trimestriel",         prefix: 'RAT' },
+  { label: 'Rapport de mission',                      prefix: 'RAM' },
+  { label: 'Rapport hebdomadaire de service',         prefix: 'RHE', hebdo: true },
 ];
 
 export default function RapportsPage({ rapports, setRapports, user }) {

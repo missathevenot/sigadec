@@ -10,7 +10,6 @@ const MENU_ITEMS = [
   { id: 'diligences', icon: '◎',  label: 'Diligences', hideFor: ['secretariat'] },
   { id: 'infos',      icon: '📋', label: 'Informations / Divers' },
   { id: 'rapports',   icon: '📄', label: 'Documentation' },
-  { id: 'chartes',    icon: '⚖️',  label: 'Charte Éthique', hideFor: ['secretariat'] },
   { id: 'planning',   icon: '📅', label: 'Planning Annuel', hideFor: ['secretariat'] },
   { id: 'courriers',  icon: '✉️',  label: 'Courriers' },
   { id: 'emi-rec',    icon: '💰', label: 'Émissions / Recettes', emiRec: true },
