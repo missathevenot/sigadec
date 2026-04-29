@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { C } from '../../constants/colors';
-import { USERS } from '../../constants/users';
-import { SERVICES } from '../../constants/services';
-import { ROLES_LABELS, ROLES_SOUMISSION_DIL } from '../../constants/roles';
 import { DIL_STATUTS } from '../../constants/statuts';
+import { IMPUTE_OPTIONS } from '../../constants/imputation';
+import { ROLES_SOUMISSION_DIL } from '../../constants/roles';
 import { fmtDate, today } from '../../utils/dates';
 import { matchSearch } from '../../utils/search';
 import { genRef } from '../../utils/refs';
 import { supabase } from '../../lib/supabase';
 import { diligenceToDb } from '../../lib/mappers';
-import { useStore } from '../../store';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Av from '../../components/ui/Av';
@@ -20,9 +18,9 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import UploadZone from '../../components/ui/UploadZone';
-import MultiSelectService from '../../components/ui/MultiSelectService';
 import EmptyState from '../../components/ui/EmptyState';
 import YearMonthFilter from '../../components/shared/YearMonthFilter';
+import { useStore } from '../../store';
 
 const STATUT_FILTRES = [
   { v: 'non_executee', l: 'Actives' },
@@ -36,10 +34,10 @@ const STATUT_FILTRES = [
 
 export default function DiligencesPage({ diligences, setDiligences, courriers, user, navigate }) {
   const { users } = useStore();
-  const [search, setSearch]     = useState('');
-  const [filtre, setFiltre]     = useState('non_executee');
-  const [year, setYear]         = useState(null);
-  const [month, setMonth]       = useState(null);
+  const [search, setSearch]       = useState('');
+  const [filtre, setFiltre]       = useState('non_executee');
+  const [year, setYear]           = useState(null);
+  const [month, setMonth]         = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const filtered = diligences
@@ -98,9 +96,7 @@ export default function DiligencesPage({ diligences, setDiligences, courriers, u
 }
 
 function DilCard({ d, users, navigate }) {
-  const st       = DIL_STATUTS.find(s => s.v === d.statut);
-  const assignee = users.find(u => u.id === d.assigneA) || USERS.find(u => u.id === d.assigneA);
-  const svcs     = (d.serviceIds || []).map(id => SERVICES.find(s => s.id === id)?.abbr).filter(Boolean);
+  const st = DIL_STATUTS.find(s => s.v === d.statut);
 
   return (
     <Card style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => navigate('diligence-detail', { id: d.id })}>
@@ -109,26 +105,30 @@ function DilCard({ d, users, navigate }) {
         {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
       </div>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 8, lineHeight: 1.4 }}>{d.intitule}</div>
-      <PBar v={d.progression} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {assignee && <Av u={assignee} sz={24} />}
-          <span style={{ fontSize: 11, color: C.sec }}>{assignee ? `${assignee.prenom} ${assignee.nom}` : '—'}</span>
+
+      {/* Barre de progression */}
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+          <span style={{ fontSize: 10, color: C.sec }}>Taux de réalisation</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: C.vert }}>{d.progression ?? 0}%</span>
+        </div>
+        <PBar v={d.progression ?? 0} />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+        <div style={{ fontSize: 11, color: C.sec }}>
+          {d.imputeA ? <span style={{ color: C.cours, fontWeight: 600 }}>{d.imputeA}</span> : '—'}
         </div>
         <div style={{ fontSize: 11, color: C.sec }}>📅 {fmtDate(d.echeance)}</div>
       </div>
-      {svcs.length > 0 && (
-        <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {svcs.map(a => <Badge key={a} l={a} bg={C.vertL} c={C.vert} />)}
-        </div>
-      )}
     </Card>
   );
 }
 
 function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
   const [intitule, setIntitule]       = useState('');
-  const [serviceIds, setServiceIds]   = useState([]);
+  const [imputeA, setImputeA]         = useState('');
+  const [statut, setStatut]           = useState('non_echu');
   const [dateSoumis, setDateSoumis]   = useState(today());
   const [echeance, setEcheance]       = useState('');
   const [description, setDescription] = useState('');
@@ -137,9 +137,10 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
   const [lierCourrier, setLier]       = useState(false);
   const [courrierIds, setCouIds]      = useState([]);
   const [saving, setSaving]           = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr]                 = useState('');
 
   const courrierOptions = courriers.map(c => ({ value: c.id, label: `${c.reference} — ${c.objet}` }));
+  const statutOpts      = DIL_STATUTS.map(s => ({ value: s.v, label: s.l }));
 
   const submit = async () => {
     if (!intitule.trim() || !echeance) { setErr('Objet et échéance sont requis.'); return; }
@@ -147,7 +148,8 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
     const ref = genRef('DIL', diligences.map(d => d.reference), dateSoumis);
     const newDil = {
       id: `dil${Date.now()}`, reference: ref, intitule: intitule.trim(),
-      assigneA: user.id, serviceIds, statut: 'non_echu', progression: 0,
+      assigneA: user.id, serviceIds: [], imputeA,
+      statut, progression: 0,
       dateSubmission: dateSoumis, echeance, description: description.trim(),
       courrierIds: lierCourrier ? courrierIds : [], objetDoc, fichierNom,
       historique: [], dateReport: null, facteursReport: null,
@@ -161,7 +163,8 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
   return (
     <Modal title="Soumettre une diligence" onClose={onClose}>
       <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
-      <MultiSelectService selected={serviceIds} onChange={setServiceIds} label="Service(s) concerné(s)" />
+      <Select label="Imputée à" value={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+      <Select label="Statut" value={statut} onChange={setStatut} options={statutOpts} required />
       <Input label="Date de soumission" value={dateSoumis} onChange={setDateSoumis} type="date" required />
       <Input label="Date d'échéance" value={echeance} onChange={setEcheance} type="date" required />
       <Textarea label="Description" value={description} onChange={setDescription} rows={3} />

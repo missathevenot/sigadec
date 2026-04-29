@@ -21,9 +21,10 @@ import MultiSelectService from '../../components/ui/MultiSelectService';
 
 export default function InfosPage({ infos, setInfos, user }) {
   const { users } = useStore();
-  const [search, setSearch]     = useState('');
-  const [filtre, setFiltre]     = useState('all');
-  const [modalOpen, setModal]   = useState(false);
+  const [search, setSearch]         = useState('');
+  const [filtre, setFiltre]         = useState('all');
+  const [modalOpen, setModal]       = useState(false);
+  const [selectedInfo, setSelected] = useState(null);
 
   const filtered = infos
     .filter(i => {
@@ -68,7 +69,7 @@ export default function InfosPage({ infos, setInfos, user }) {
             const st     = INFO_STATUTS.find(s => s.v === inf.statut);
             const auteur = (users.length ? users : USERS).find(u => u.id === inf.auteurId);
             return (
-              <Card key={inf.id} style={{ marginBottom: 10 }}>
+              <Card key={inf.id} style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => setSelected(inf)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace' }}>{inf.reference}</div>
                   {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
@@ -84,7 +85,118 @@ export default function InfosPage({ infos, setInfos, user }) {
       }
 
       {modalOpen && <AddInfoModal infos={infos} setInfos={setInfos} user={user} onClose={() => setModal(false)} />}
+      {selectedInfo && (
+        <InfoDetailModal
+          info={selectedInfo}
+          setInfos={setInfos}
+          user={user}
+          users={users}
+          onClose={() => setSelected(null)}
+          onDeleted={() => { setSelected(null); }}
+        />
+      )}
     </div>
+  );
+}
+
+/* ── Modal détail + édition + suppression ── */
+function InfoDetailModal({ info, setInfos, user, users, onClose, onDeleted }) {
+  const [editMode, setEditMode] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const st     = INFO_STATUTS.find(s => s.v === info.statut);
+  const auteur = (users.length ? users : USERS).find(u => u.id === info.auteurId);
+  const canEdit = user.role !== 'secretariat';
+  const isAdmin = user.role === 'admin';
+
+  const handleDelete = async () => {
+    if (!window.confirm('Supprimer définitivement cette information ?')) return;
+    setDeleting(true);
+    await supabase.from('infos').delete().eq('id', info.id);
+    setInfos(is => is.filter(i => i.id !== info.id));
+    onDeleted();
+  };
+
+  if (editMode) {
+    return <EditInfoModal info={info} setInfos={setInfos} onClose={onClose} />;
+  }
+
+  return (
+    <Modal title="Information / Divers" sub={info.reference} onClose={onClose}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
+        {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
+        <span style={{ fontSize: 11, color: C.sec }}>{fmtDate(info.dateSubmission)}</span>
+      </div>
+
+      <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 10, lineHeight: 1.4 }}>{info.titre}</div>
+
+      {info.description && (
+        <div style={{ fontSize: 13, color: C.sec, lineHeight: 1.6, marginBottom: 12, padding: '10px 12px', background: C.bg, borderRadius: 8 }}>
+          {info.description}
+        </div>
+      )}
+
+      {info.objetDoc && (
+        <div style={{ fontSize: 12, color: C.sec, marginBottom: 8 }}>
+          <strong>Nature :</strong> {info.objetDoc}
+        </div>
+      )}
+
+      {info.fichierNom && (
+        <div style={{ fontSize: 12, color: C.cours, marginBottom: 10 }}>📄 {info.fichierNom}</div>
+      )}
+
+      <div style={{ fontSize: 11, color: C.sec, marginBottom: 16 }}>
+        Soumis par : {auteur ? `${auteur.prenom} ${auteur.nom}` : '—'}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {canEdit && (
+          <Btn onClick={() => setEditMode(true)} full variant="secondary">✏️ Modifier</Btn>
+        )}
+        {isAdmin && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{ width: '100%', padding: '11px 0', background: '#FEF2F2', color: C.urg, border: `1.5px solid #FECACA`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+          >
+            {deleting ? 'Suppression…' : '🗑️ Supprimer'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function EditInfoModal({ info, setInfos, onClose }) {
+  const [titre, setTitre]     = useState(info.titre);
+  const [statut, setStatut]   = useState(info.statut);
+  const [desc, setDesc]       = useState(info.description || '');
+  const [date, setDate]       = useState(info.dateSubmission || '');
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+
+  const save = async () => {
+    if (!titre.trim()) { setErr("L'objet est requis."); return; }
+    setSaving(true);
+    const updates = { titre: titre.trim(), statut, description: desc, date_submission: date, date };
+    await supabase.from('infos').update(updates).eq('id', info.id);
+    setInfos(is => is.map(i => i.id === info.id
+      ? { ...i, titre: titre.trim(), statut, description: desc, dateSubmission: date }
+      : i));
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Modal title="Modifier l'information" sub={info.reference} onClose={onClose}>
+      <Input label="Objet" value={titre} onChange={setTitre} required />
+      <Input label="Date" value={date} onChange={setDate} type="date" />
+      <Select label="Statut" value={statut} onChange={setStatut} options={INFO_STATUTS.map(s => ({ value: s.v, label: s.l }))} required />
+      <Textarea label="Description" value={desc} onChange={setDesc} rows={3} />
+      {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+      <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer les modifications'}</Btn>
+    </Modal>
   );
 }
 
@@ -97,7 +209,7 @@ function AddInfoModal({ infos, setInfos, user, onClose }) {
   const [objetDoc, setObjetDoc]     = useState('');
   const [fichierNom, setFichierNom] = useState('');
   const [saving, setSaving]         = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr]               = useState('');
 
   const submit = async () => {
     if (!titre.trim()) { setErr("L'objet est requis."); return; }

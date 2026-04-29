@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { C } from '../../constants/colors';
-import { USERS } from '../../constants/users';
-import { SERVICES } from '../../constants/services';
 import { DIL_STATUTS } from '../../constants/statuts';
+import { IMPUTE_OPTIONS } from '../../constants/imputation';
 import { fmtDate, today } from '../../utils/dates';
 import { supabase } from '../../lib/supabase';
-import { useStore } from '../../store';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import PBar from '../../components/ui/PBar';
@@ -16,16 +14,24 @@ import Textarea from '../../components/ui/Textarea';
 import Input from '../../components/ui/Input';
 
 export default function DiligenceDetail({ diligence, diligences, setDiligences, courriers, user, navigate }) {
-  const { users } = useStore();
-  const [modalOpen, setModal] = useState(false);
+  const [modalUpdate, setModalUpdate] = useState(false);
+  const [modalEdit, setModalEdit]     = useState(false);
+  const [deleting, setDeleting]       = useState(false);
 
   if (!diligence) return <div style={{ padding: 20, textAlign: 'center', color: C.sec }}>Diligence introuvable.</div>;
 
-  const st       = DIL_STATUTS.find(s => s.v === diligence.statut);
-  const allUsers = users.length ? users : USERS;
-  const assignee = allUsers.find(u => u.id === diligence.assigneA);
-  const svcs     = (diligence.serviceIds || []).map(id => SERVICES.find(s => s.id === id)).filter(Boolean);
-  const likedCourriers = (diligence.courrierIds || []).map(id => courriers.find(c => c.id === id)).filter(Boolean);
+  const st            = DIL_STATUTS.find(s => s.v === diligence.statut);
+  const likedCourriers = (diligence.courrierIds || []).map(id => courriers?.find(c => c.id === id)).filter(Boolean);
+  const canEdit       = user.role !== 'secretariat';
+  const isAdmin       = user.role === 'admin';
+
+  const handleDelete = async () => {
+    if (!window.confirm('Supprimer définitivement cette diligence ?')) return;
+    setDeleting(true);
+    await supabase.from('diligences').delete().eq('id', diligence.id);
+    setDiligences(ds => ds.filter(d => d.id !== diligence.id));
+    navigate('diligences');
+  };
 
   return (
     <div style={{ padding: '14px', animation: 'pageIn .22s ease-out' }}>
@@ -35,17 +41,24 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
 
       <div style={{ fontFamily: 'monospace', fontSize: 11, color: C.sec, marginBottom: 4 }}>{diligence.reference}</div>
       <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 17, color: C.txt, marginBottom: 10, lineHeight: 1.4 }}>{diligence.intitule}</div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
         {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
-        <span style={{ fontSize: 12, color: C.sec }}>{diligence.progression}%</span>
+        <span style={{ fontSize: 12, color: C.sec }}>{diligence.progression ?? 0}%</span>
       </div>
-      <PBar v={diligence.progression} />
 
-      <Card style={{ marginTop: 14, marginBottom: 12 }}>
-        <Row label="Service(s)" value={svcs.map(s => s.abbr).join(', ') || '—'} />
-        <Row label="Assigné à" value={assignee ? `${assignee.prenom} ${assignee.nom}` : '—'} />
-        <Row label="Soumis le" value={fmtDate(diligence.dateSubmission)} />
-        <Row label="Échéance" value={fmtDate(diligence.echeance)} />
+      {/* Barre de progression */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 11, color: C.sec, fontWeight: 600 }}>Taux de réalisation</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: C.vert }}>{diligence.progression ?? 0}%</span>
+        </div>
+        <PBar v={diligence.progression ?? 0} />
+      </div>
+
+      <Card style={{ marginBottom: 12 }}>
+        <Row label="Imputée à"  value={diligence.imputeA || '—'} />
+        <Row label="Soumis le"  value={fmtDate(diligence.dateSubmission)} />
+        <Row label="Échéance"   value={fmtDate(diligence.echeance)} />
       </Card>
 
       {diligence.statut === 'reportee' && (
@@ -106,9 +119,29 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
         </div>
       )}
 
-      <Btn onClick={() => setModal(true)} full>Mettre à jour</Btn>
+      {/* Boutons d'action */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Btn onClick={() => setModalUpdate(true)} full>Mettre à jour la progression</Btn>
+        {canEdit && (
+          <Btn onClick={() => setModalEdit(true)} full variant="secondary">✏️ Modifier la diligence</Btn>
+        )}
+        {isAdmin && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{ width: '100%', padding: '11px 0', background: '#FEF2F2', color: C.urg, border: `1.5px solid #FECACA`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+          >
+            {deleting ? 'Suppression…' : '🗑️ Supprimer la diligence'}
+          </button>
+        )}
+      </div>
 
-      {modalOpen && <UpdateModal diligence={diligence} setDiligences={setDiligences} user={user} onClose={() => setModal(false)} />}
+      {modalUpdate && (
+        <UpdateModal diligence={diligence} setDiligences={setDiligences} user={user} onClose={() => setModalUpdate(false)} />
+      )}
+      {modalEdit && (
+        <EditModal diligence={diligence} setDiligences={setDiligences} onClose={() => setModalEdit(false)} />
+      )}
     </div>
   );
 }
@@ -122,14 +155,46 @@ function Row({ label, value }) {
   );
 }
 
+function EditModal({ diligence, setDiligences, onClose }) {
+  const [intitule, setIntitule]   = useState(diligence.intitule);
+  const [imputeA, setImputeA]     = useState(diligence.imputeA || '');
+  const [echeance, setEcheance]   = useState(diligence.echeance || '');
+  const [description, setDesc]    = useState(diligence.description || '');
+  const [saving, setSaving]       = useState(false);
+  const [err, setErr]             = useState('');
+
+  const save = async () => {
+    if (!intitule.trim()) { setErr("L'objet est requis."); return; }
+    setSaving(true);
+    const updates = { intitule: intitule.trim(), impute_a: imputeA || null, echeance, description };
+    await supabase.from('diligences').update(updates).eq('id', diligence.id);
+    setDiligences(ds => ds.map(d => d.id === diligence.id
+      ? { ...d, intitule: intitule.trim(), imputeA, echeance, description }
+      : d));
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Modal title="Modifier la diligence" sub={diligence.reference} onClose={onClose}>
+      <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
+      <Select label="Imputée à" value={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+      <Input label="Date d'échéance" value={echeance} onChange={setEcheance} type="date" />
+      <Textarea label="Description" value={description} onChange={setDesc} rows={3} />
+      {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+      <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer les modifications'}</Btn>
+    </Modal>
+  );
+}
+
 function UpdateModal({ diligence, setDiligences, user, onClose }) {
   const [statut, setStatut]           = useState(diligence.statut);
-  const [progression, setProgression] = useState(diligence.progression);
+  const [progression, setProgression] = useState(diligence.progression ?? 0);
   const [commentaire, setCommentaire] = useState('');
   const [dateReport, setDateReport]   = useState('');
   const [facteursReport, setFacteurs] = useState('');
   const [saving, setSaving]           = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr]                 = useState('');
 
   const save = async () => {
     if (!commentaire.trim()) { setErr('Le commentaire est obligatoire.'); return; }
@@ -142,8 +207,8 @@ function UpdateModal({ diligence, setDiligences, user, onClose }) {
     const newHisto = [...(diligence.historique || []), entry];
     const updates = {
       statut, progression: Number(progression), historique: newHisto,
-      date_report: statut === 'reportee' ? dateReport : diligence.dateReport,
-      facteurs_report: statut === 'reportee' ? facteursReport : diligence.facteursReport,
+      date_report:      statut === 'reportee' ? dateReport     : diligence.dateReport,
+      facteurs_report:  statut === 'reportee' ? facteursReport : diligence.facteursReport,
     };
     await supabase.from('diligences').update(updates).eq('id', diligence.id);
     setDiligences(ds => ds.map(d => d.id === diligence.id
@@ -158,7 +223,9 @@ function UpdateModal({ diligence, setDiligences, user, onClose }) {
     <Modal title="Mettre à jour la diligence" sub={diligence.reference} onClose={onClose}>
       <Select label="Nouveau statut" value={statut} onChange={setStatut} options={DIL_STATUTS.map(s => ({ value: s.v, label: s.l }))} required />
       <div style={{ marginBottom: 12 }}>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 4 }}>Progression : {progression}%</label>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 4 }}>
+          Progression : {progression}%
+        </label>
         <input type="range" min={0} max={100} value={progression} onChange={e => setProgression(e.target.value)} style={{ width: '100%' }} />
       </div>
       {statut === 'reportee' && (

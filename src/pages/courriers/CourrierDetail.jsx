@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { C } from '../../constants/colors';
-import { USERS } from '../../constants/users';
-import { SERVICES } from '../../constants/services';
 import { CORR_EMIS_STATUTS, CORR_RECU_STATUTS } from '../../constants/statuts';
+import { IMPUTE_OPTIONS, EMIS_PAR_OPTIONS } from '../../constants/imputation';
 import { fmtDate, today } from '../../utils/dates';
 import { supabase } from '../../lib/supabase';
 import Card from '../../components/ui/Card';
@@ -11,16 +10,27 @@ import Btn from '../../components/ui/Btn';
 import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
+import Input from '../../components/ui/Input';
 
 export default function CourrierDetail({ courrier, courriers, setCourriers, user, navigate }) {
-  const [modalOpen, setModal] = useState(false);
+  const [modalUpdate, setModalUpdate] = useState(false);
+  const [modalEdit, setModalEdit]     = useState(false);
+  const [deleting, setDeleting]       = useState(false);
 
   if (!courrier) return <div style={{ padding: 20, color: C.sec }}>Courrier introuvable.</div>;
 
   const allStatuts = courrier.sens === 'emis' ? CORR_EMIS_STATUTS : CORR_RECU_STATUTS;
-  const st = allStatuts.find(s => s.v === courrier.statut);
-  const assignee = USERS.find(u => u.id === courrier.assigneARoleId);
-  const svcEm = SERVICES.find(s => s.id === courrier.serviceEmetteurId);
+  const st         = allStatuts.find(s => s.v === courrier.statut);
+  const canEdit    = user.role !== 'secretariat';
+  const isAdmin    = user.role === 'admin';
+
+  const handleDelete = async () => {
+    if (!window.confirm('Supprimer définitivement ce courrier ?')) return;
+    setDeleting(true);
+    await supabase.from('courriers').delete().eq('id', courrier.id);
+    setCourriers(cs => cs.filter(c => c.id !== courrier.id));
+    navigate('courriers');
+  };
 
   return (
     <div style={{ padding: 14, animation: 'pageIn .22s ease-out' }}>
@@ -41,12 +51,16 @@ export default function CourrierDetail({ courrier, courriers, setCourriers, user
       </div>
 
       <Card style={{ marginBottom: 12 }}>
-        <Row label="Partenaire" value={courrier.partenaire || '—'} />
-        {courrier.sens === 'recu' && <Row label="Structure émettrice" value={courrier.structureEmettrice || '—'} />}
-        {svcEm && <Row label="Service émetteur" value={svcEm.abbr} />}
-        {assignee && <Row label="Imputé à" value={`${assignee.prenom} ${assignee.nom}`} />}
-        <Row label="Date" value={fmtDate(courrier.dateEmission)} />
-        {courrier.joursAttente > 0 && <Row label="Jours d'attente" value={`${courrier.joursAttente}j`} />}
+        {courrier.sens === 'recu' && courrier.imputeA && (
+          <Row label="Imputé"        value={courrier.imputeA} />
+        )}
+        {courrier.sens === 'emis' && courrier.emisPar && (
+          <Row label="Emis par"      value={courrier.emisPar} />
+        )}
+        <Row label="Date"            value={fmtDate(courrier.dateEmission)} />
+        {courrier.joursAttente > 0 && (
+          <Row label="Jours d'attente" value={`${courrier.joursAttente}j`} />
+        )}
       </Card>
 
       {courrier.corps && (
@@ -81,10 +95,28 @@ export default function CourrierDetail({ courrier, courriers, setCourriers, user
         </Card>
       )}
 
-      <Btn onClick={() => setModal(true)} full>Mettre à jour le statut</Btn>
+      {/* Boutons d'action */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Btn onClick={() => setModalUpdate(true)} full>Mettre à jour le statut</Btn>
+        {canEdit && (
+          <Btn onClick={() => setModalEdit(true)} full variant="secondary">✏️ Modifier le courrier</Btn>
+        )}
+        {isAdmin && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{ width: '100%', padding: '11px 0', background: '#FEF2F2', color: C.urg, border: `1.5px solid #FECACA`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+          >
+            {deleting ? 'Suppression…' : '🗑️ Supprimer le courrier'}
+          </button>
+        )}
+      </div>
 
-      {modalOpen && (
-        <UpdateStatutModal courrier={courrier} setCourriers={setCourriers} user={user} onClose={() => setModal(false)} />
+      {modalUpdate && (
+        <UpdateStatutModal courrier={courrier} setCourriers={setCourriers} user={user} onClose={() => setModalUpdate(false)} />
+      )}
+      {modalEdit && (
+        <EditModal courrier={courrier} setCourriers={setCourriers} onClose={() => setModalEdit(false)} />
       )}
     </div>
   );
@@ -96,6 +128,50 @@ function Row({ label, value }) {
       <span style={{ color: C.sec, fontWeight: 600 }}>{label}</span>
       <span style={{ color: C.txt, textAlign: 'right', maxWidth: '60%' }}>{value}</span>
     </div>
+  );
+}
+
+function EditModal({ courrier, setCourriers, onClose }) {
+  const [objet, setObjet]     = useState(courrier.objet);
+  const [imputeA, setImputeA] = useState(courrier.imputeA || '');
+  const [emisPar, setEmisPar] = useState(courrier.emisPar || '');
+  const [dateEm, setDateEm]   = useState(courrier.dateEmission || '');
+  const [corps, setCorps]     = useState(courrier.corps || '');
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+
+  const save = async () => {
+    if (!objet.trim()) { setErr("L'objet est requis."); return; }
+    setSaving(true);
+    const updates = {
+      objet: objet.trim(),
+      impute_a:      courrier.sens === 'recu'  ? (imputeA || null) : courrier.imputeA,
+      emis_par:      courrier.sens === 'emis'  ? (emisPar || null) : courrier.emisPar,
+      date_emission: dateEm,
+      corps,
+    };
+    await supabase.from('courriers').update(updates).eq('id', courrier.id);
+    setCourriers(cs => cs.map(c => c.id === courrier.id
+      ? { ...c, objet: objet.trim(), imputeA, emisPar, dateEmission: dateEm, corps }
+      : c));
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Modal title="Modifier le courrier" sub={courrier.reference} onClose={onClose}>
+      <Input label="Objet" value={objet} onChange={setObjet} required />
+      {courrier.sens === 'recu' && (
+        <Select label="Imputé" value={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+      )}
+      {courrier.sens === 'emis' && (
+        <Select label="Emis par" value={emisPar} onChange={setEmisPar} options={EMIS_PAR_OPTIONS} placeholder="Choisir…" />
+      )}
+      <Input label="Date" value={dateEm} onChange={setDateEm} type="date" />
+      <Textarea label="Corps du courrier" value={corps} onChange={setCorps} rows={3} />
+      {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+      <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer les modifications'}</Btn>
+    </Modal>
   );
 }
 

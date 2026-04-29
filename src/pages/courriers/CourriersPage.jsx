@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { C } from '../../constants/colors';
-import { SERVICES } from '../../constants/services';
 import { ROLES_LABELS, ROLES_COURRIER_RECU } from '../../constants/roles';
 import { CORR_EMIS_STATUTS, CORR_RECU_STATUTS } from '../../constants/statuts';
+import { IMPUTE_OPTIONS, EMIS_PAR_OPTIONS } from '../../constants/imputation';
 import { fmtDate, today } from '../../utils/dates';
 import { matchSearch } from '../../utils/search';
 import { genRef } from '../../utils/refs';
@@ -27,9 +27,9 @@ const FILTRES = [
 ];
 
 export default function CourriersPage({ courriers, setCourriers, user, navigate }) {
-  const [search, setSearch]   = useState('');
-  const [filtre, setFiltre]   = useState('all');
-  const [modal, setModal]     = useState(false);
+  const [search, setSearch] = useState('');
+  const [filtre, setFiltre] = useState('all');
+  const [modal, setModal]   = useState(false);
 
   const showStats = ['secretariat','directeur','admin'].includes(user.role);
   const total   = courriers.length;
@@ -40,8 +40,8 @@ export default function CourriersPage({ courriers, setCourriers, user, navigate 
   const filtered = courriers
     .filter(c => {
       if (!matchSearch(c, search)) return false;
-      if (filtre === 'recu'    && c.sens !== 'recu')   return false;
-      if (filtre === 'emis'    && c.sens !== 'emis')   return false;
+      if (filtre === 'recu'    && c.sens !== 'recu')    return false;
+      if (filtre === 'emis'    && c.sens !== 'emis')    return false;
       if (filtre === 'urgents' && c.joursAttente <= 10) return false;
       return true;
     })
@@ -105,6 +105,7 @@ function StatBox({ label, value, color }) {
 
 function CourrierCard({ c, navigate }) {
   const st = [...CORR_EMIS_STATUTS, ...CORR_RECU_STATUTS].find(s => s.v === c.statut);
+  const destinataire = c.sens === 'recu' ? c.imputeA : c.emisPar;
   return (
     <Card style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => navigate('courrier-detail', { id: c.id })}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -118,7 +119,8 @@ function CourrierCard({ c, navigate }) {
       </div>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 4, lineHeight: 1.4 }}>{c.objet}</div>
       <div style={{ fontSize: 11, color: C.sec }}>
-        {c.partenaire} · {fmtDate(c.dateEmission)}
+        {destinataire && <span style={{ color: C.cours, fontWeight: 600 }}>{destinataire} · </span>}
+        {fmtDate(c.dateEmission)}
         {c.joursAttente > 10 && <span style={{ color: C.urg, marginLeft: 6 }}>⚠️ {c.joursAttente}j</span>}
       </div>
     </Card>
@@ -127,34 +129,32 @@ function CourrierCard({ c, navigate }) {
 
 function NewCourrierModal({ courriers, setCourriers, user, onClose }) {
   const { users } = useStore();
-  const [sens, setSens]             = useState('recu');
-  const [objet, setObjet]           = useState('');
-  const [partenaire, setPartenaire] = useState('');
-  const [structureEm, setStructEm]  = useState('');
-  const [serviceEmId, setServiceEm] = useState('');
-  const [assigneId, setAssigneId]   = useState('');
-  const [dateEm, setDateEm]         = useState(today());
-  const [corps, setCorps]           = useState('');
-  const [fichierNom, setFichierNom] = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [err, setErr] = useState('');
+  const [sens, setSens]         = useState('recu');
+  const [objet, setObjet]       = useState('');
+  const [imputeA, setImputeA]   = useState('');
+  const [emisPar, setEmisPar]   = useState('');
+  const [dateEm, setDateEm]     = useState(today());
+  const [corps, setCorps]       = useState('');
+  const [fichierNom, setFich]   = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState('');
 
-  const canCreateRecu  = ROLES_COURRIER_RECU.includes(user.role) || user.role === 'admin';
-  const serviceOptions = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 30)}…` }));
-  const userOptions    = (users.length ? users : []).filter(u => u.statut === 'actif').map(u => ({ value: u.id, label: `${u.prenom} ${u.nom} (${ROLES_LABELS[u.role]})` }));
+  const canCreateRecu = ROLES_COURRIER_RECU.includes(user.role) || user.role === 'admin';
 
   const submit = async () => {
-    if (!objet.trim() || !partenaire.trim()) { setErr('Objet et partenaire sont requis.'); return; }
+    if (!objet.trim()) { setErr("L'objet est requis."); return; }
     setSaving(true);
     const ref = genRef('COU', courriers.map(c => c.reference), dateEm);
     const newC = {
       id: `c${Date.now()}`, reference: ref, sens, objet: objet.trim(),
-      partenaire: partenaire.trim(), structureEmettrice: structureEm,
+      partenaire: '', structureEmettrice: '',
       statut: sens === 'recu' ? 'en_attente' : 'en_cours_redaction',
-      joursAttente: 0, serviceEmetteurId: serviceEmId,
-      assigneARoleId: sens === 'recu' ? assigneId : null,
+      joursAttente: 0, serviceEmetteurId: null,
+      assigneARoleId: null,
       corps: corps.trim(), noteInterne: '', relances: [],
       dateEmission: dateEm, objetDoc: '', fichierNom,
+      imputeA: sens === 'recu'  ? imputeA : '',
+      emisPar: sens === 'emis'  ? emisPar : '',
     };
     await supabase.from('courriers').insert(courrierToDb(newC));
     setCourriers(cs => [newC, ...cs]);
@@ -179,13 +179,15 @@ function NewCourrierModal({ courriers, setCourriers, user, onClose }) {
         </div>
       )}
       <Input label="Objet" value={objet} onChange={setObjet} required />
-      <Input label="Structure partenaire" value={partenaire} onChange={setPartenaire} required />
-      {sens === 'recu' && <Input label="Structure émettrice" value={structureEm} onChange={setStructEm} />}
-      {sens === 'emis' && <Select label="Service émetteur" value={serviceEmId} onChange={setServiceEm} options={serviceOptions} placeholder="Choisir un service…" />}
-      {sens === 'recu' && <Select label="Imputer à" value={assigneId} onChange={setAssigneId} options={userOptions} placeholder="Choisir un agent…" />}
+      {sens === 'recu' && (
+        <Select label="Imputé" value={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+      )}
+      {sens === 'emis' && (
+        <Select label="Emis par" value={emisPar} onChange={setEmisPar} options={EMIS_PAR_OPTIONS} placeholder="Choisir…" />
+      )}
       <Input label="Date" value={dateEm} onChange={setDateEm} type="date" required />
       <Textarea label="Corps du courrier" value={corps} onChange={setCorps} rows={3} />
-      <UploadZone label="Document joint" fichierNom={fichierNom} setFichierNom={setFichierNom} />
+      <UploadZone label="Document joint" fichierNom={fichierNom} setFichierNom={setFich} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
       <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer le courrier'}</Btn>
     </Modal>
