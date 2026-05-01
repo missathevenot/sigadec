@@ -29,6 +29,7 @@ const TYPES = [
   { label: "Rapport d'activités trimestriel",         prefix: 'RAT' },
   { label: 'Rapport de mission',                      prefix: 'RAM' },
   { label: 'Rapport hebdomadaire de service',         prefix: 'RHE', hebdo: true },
+  { label: 'Rapport hebdomadaire de Sous-Direction', prefix: 'RSD', hebdo: true },
 ];
 
 export default function RapportsPage({ rapports, setRapports, user }) {

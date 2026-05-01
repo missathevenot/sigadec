@@ -9,3 +9,11 @@ export const fmtRel = d => {
 };
 
 export const today = () => new Date().toISOString().split('T')[0];
+
+/** Ajoute n jours à une date ISO string, retourne ISO string */
+export const addDays = (dateStr, n) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+};

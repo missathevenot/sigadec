@@ -81,6 +81,7 @@ export const mapPlanningCRRows = (rows, basePlan) => {
       ...plan[r.semaine],
       serviceId:   r.service_id  || plan[r.semaine]?.serviceId,
       datePrevue:  r.date_prevue || null,
+      dateLecture: r.date_lecture || null,
       description: r.description || '',
     };
   });

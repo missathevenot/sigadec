@@ -3,7 +3,7 @@ import { C } from '../../constants/colors';
 import { SERVICES } from '../../constants/services';
 import { MOIS_NOMS } from '../../constants/mois';
 import { PRINCIPES_VALEURS } from '../../constants/principes';
-import { fmtDate, today } from '../../utils/dates';
+import { fmtDate, today, addDays } from '../../utils/dates';
 import { isoWeek } from '../../utils/refs';
 import { supabase } from '../../lib/supabase';
 import Card from '../../components/ui/Card';
@@ -21,12 +21,34 @@ function lastIsoWeekOfYear(year) {
   return isoWeek(new Date(year, 11, 28));
 }
 
+function Row({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBlock: 6, borderBottom: `1px solid ${C.bord}`, fontSize: 13 }}>
+      <span style={{ color: C.sec, fontWeight: 600, minWidth: 110 }}>{label}</span>
+      <span style={{ color: C.txt, textAlign: 'right', flex: 1 }}>{value || '—'}</span>
+    </div>
+  );
+}
+
+function ActionBtn({ label, color, bg, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: '5px 10px', borderRadius: 8, border: `1px solid ${color}`,
+      background: bg, color, fontWeight: 700, fontSize: 11, cursor: 'pointer',
+    }}>
+      {label}
+    </button>
+  );
+}
+
 export default function PlanningPage({ user, planningCharte, setPlanningCharte, planningCR, setPlanningCR, rapports }) {
   const [onglet, setOnglet]     = useState('charte');
   const [modalCharte, setMCh]   = useState(false);
   const [modalCR, setMCR]       = useState(false);
-  const [editCharte, setEditCh] = useState(null); // moisNum
-  const [editCR, setEditCR]     = useState(null); // semaine
+  const [editCharte, setEditCh] = useState(null);
+  const [editCR, setEditCR]     = useState(null);
+  const [viewCharte, setViewCh] = useState(null);
+  const [viewCR, setViewCR]     = useState(null);
 
   const canPlan   = ROLES_PLANIF.includes(user.role);
   const canEdit   = user.role !== 'secretariat';
@@ -95,9 +117,7 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
             <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14, color: C.txt }}>
               Planning Charte Éthique — {ANNEE_COURANTE}
             </div>
-            {canPlan && (
-              <Btn size="sm" onClick={() => setMCh(true)}>+ Planifier</Btn>
-            )}
+            {canPlan && <Btn size="sm" onClick={() => setMCh(true)}>+ Planifier</Btn>}
           </div>
 
           {Object.entries(planningCharte)
@@ -112,9 +132,8 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
                   marginBottom: 8,
                   borderLeft: isCurrent ? `3px solid ${C.vert}` : `3px solid transparent`,
                   background: isCurrent ? C.vertL : C.blanc,
-                  cursor: canEdit ? 'pointer' : 'default',
-                }} onClick={() => canEdit && setEditCh(moisNum)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <span style={{ fontWeight: 800, fontSize: 14, color: C.txt }}>{entry.mois}</span>
@@ -134,9 +153,19 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
                         ? <div style={{ color: C.ok,   fontWeight: 700, fontSize: 11 }}>✅ Déposé</div>
                         : <div style={{ color: C.orng, fontWeight: 700, fontSize: 11 }}>⏳ En attente</div>
                       }
-                      {canEdit && <div style={{ fontSize: 10, color: C.vert, marginTop: 4 }}>✏️ modifier</div>}
                     </div>
                   </div>
+                  {canEdit && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <ActionBtn label="👁 Afficher"  color={C.cours} bg={C.coursB} onClick={() => setViewCh(moisNum)} />
+                      <ActionBtn label="✏️ Modifier"  color={C.vert}  bg={C.vertL}  onClick={() => setEditCh(moisNum)} />
+                      {isAdmin && (
+                        <ActionBtn label="🗑️" color={C.urg} bg="#FEF2F2"
+                          onClick={() => { handleDeleteCharte(moisNum); }}
+                        />
+                      )}
+                    </div>
+                  )}
                 </Card>
               );
             })}
@@ -150,50 +179,59 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
             <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14, color: C.txt }}>
               Planning CR CoDcad — Semaines {sMin} à {sMax}
             </div>
-            {canPlan && (
-              <Btn size="sm" onClick={() => setMCR(true)}>+ Planifier</Btn>
-            )}
+            {canPlan && <Btn size="sm" onClick={() => setMCR(true)}>+ Planifier</Btn>}
           </div>
 
           {crEntries.length === 0 && (
             <div style={{ textAlign: 'center', color: C.sec, fontSize: 13, paddingTop: 24 }}>Aucune semaine à afficher.</div>
           )}
 
-          {crEntries.map(({ w, serviceId, datePrevue }) => {
+          {crEntries.map(({ w, serviceId, datePrevue, dateLecture }) => {
             const svc       = SERVICES.find(s => s.id === serviceId);
             const isCurrent = w === SEMAINE_COURANTE;
             const depose    = crDepose(w);
             return (
-              <div key={w}
-                onClick={() => canEdit && setEditCR(w)}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 14px', borderRadius: 10, marginBottom: 6,
-                  background: isCurrent ? C.vertL : C.blanc,
-                  border: isCurrent ? `1.5px solid ${C.vert}` : `1px solid ${C.bord}`,
-                  cursor: canEdit ? 'pointer' : 'default',
-                }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? C.vert : C.txt }}>
-                      {isCurrent ? '▶ ' : ''}Semaine {w}
-                    </span>
-                    {isCurrent && (
-                      <span style={{ fontSize: 9, background: C.vert, color: C.blanc, borderRadius: 6, padding: '1px 6px', fontWeight: 700 }}>ACTUELLE</span>
+              <div key={w} style={{
+                padding: '10px 14px', borderRadius: 10, marginBottom: 8,
+                background: isCurrent ? C.vertL : C.blanc,
+                border: isCurrent ? `1.5px solid ${C.vert}` : `1px solid ${C.bord}`,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? C.vert : C.txt }}>
+                        {isCurrent ? '▶ ' : ''}Semaine {w}
+                      </span>
+                      {isCurrent && (
+                        <span style={{ fontSize: 9, background: C.vert, color: C.blanc, borderRadius: 6, padding: '1px 6px', fontWeight: 700 }}>ACTUELLE</span>
+                      )}
+                    </div>
+                    {datePrevue && (
+                      <div style={{ fontSize: 11, color: C.sec, marginTop: 2 }}>📅 Date prévue : {fmtDate(datePrevue)}</div>
+                    )}
+                    {dateLecture && (
+                      <div style={{ fontSize: 11, color: C.cours, marginTop: 2 }}>📖 Date lecture : {fmtDate(dateLecture)}</div>
                     )}
                   </div>
-                  {datePrevue && (
-                    <div style={{ fontSize: 11, color: C.sec, marginTop: 2 }}>{fmtDate(datePrevue)}</div>
-                  )}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 12, color: C.vert, fontWeight: 700 }}>{svc?.abbr || '—'}</div>
+                    {depose
+                      ? <div style={{ fontSize: 10, color: C.ok,  fontWeight: 600 }}>✅ Déposé</div>
+                      : <div style={{ fontSize: 10, color: C.sec }}>⏳ En attente</div>
+                    }
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12, color: C.vert, fontWeight: 700 }}>{svc?.abbr || '—'}</div>
-                  {depose
-                    ? <div style={{ fontSize: 10, color: C.ok,  fontWeight: 600 }}>✅ Déposé</div>
-                    : <div style={{ fontSize: 10, color: C.sec }}>⏳ En attente</div>
-                  }
-                  {canEdit && <div style={{ fontSize: 9, color: C.vert, marginTop: 2 }}>✏️</div>}
-                </div>
+                {canEdit && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <ActionBtn label="👁 Afficher"  color={C.cours} bg={C.coursB} onClick={() => setViewCR(w)} />
+                    <ActionBtn label="✏️ Modifier"  color={C.vert}  bg={C.vertL}  onClick={() => setEditCR(w)} />
+                    {isAdmin && (
+                      <ActionBtn label="🗑️" color={C.urg} bg="#FEF2F2"
+                        onClick={() => { handleDeleteCR(w); }}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -206,6 +244,14 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
       )}
       {modalCR && (
         <PlanifierCRModal planningCR={planningCR} setPlanningCR={setPlanningCR} user={user} onClose={() => setMCR(false)} />
+      )}
+
+      {/* Modals View */}
+      {viewCharte !== null && (
+        <ViewCharteModal moisNum={viewCharte} entry={planningCharte[viewCharte]} onClose={() => setViewCh(null)} />
+      )}
+      {viewCR !== null && (
+        <ViewCRModal semaine={viewCR} entry={planningCR[viewCR]} onClose={() => setViewCR(null)} />
       )}
 
       {/* Modals Éditer */}
@@ -225,6 +271,7 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
           entry={planningCR[editCR]}
           setPlanningCR={setPlanningCR}
           isAdmin={isAdmin}
+          canEditLecture={user.role !== 'secretariat'}
           onDelete={() => { handleDeleteCR(editCR); setEditCR(null); }}
           onClose={() => setEditCR(null)}
         />
@@ -274,7 +321,90 @@ function PlanifierCharteModal({ planningCharte, setPlanningCharte, user, onClose
   );
 }
 
-/* ── Modal Éditer Charte (clic sur entrée) ── */
+/* ── Modal Planifier CR ── */
+function PlanifierCRModal({ planningCR, setPlanningCR, user, onClose }) {
+  const lastWeek  = lastIsoWeekOfYear(ANNEE_COURANTE);
+  const canEdit   = user.role !== 'secretariat';
+  const [semaine, setSemaine]         = useState(String(SEMAINE_COURANTE));
+  const [serviceId, setSvc]           = useState('');
+  const [datePrevue, setDatePrevue]   = useState(today());
+  const [dateLecture, setDateLecture] = useState(addDays(today(), 7));
+  const [saving, setSaving]           = useState(false);
+  const [err, setErr]                 = useState('');
+
+  const handleDatePrevue = (val) => {
+    setDatePrevue(val);
+    setDateLecture(addDays(val, 7));
+  };
+
+  const semaineOpts = Array.from({ length: lastWeek }, (_, i) => ({
+    value: String(i + 1),
+    label: `Semaine ${i + 1}${i + 1 === SEMAINE_COURANTE ? ' (actuelle)' : ''}`,
+  }));
+  const svcOpts = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 28)}…` }));
+
+  const submit = async () => {
+    if (!semaine || !serviceId) { setErr('Semaine et service sont requis.'); return; }
+    setSaving(true);
+    const w = parseInt(semaine);
+    const { data: existing } = await supabase.from('planning_cr').select('id').eq('semaine', w).maybeSingle();
+    const row = { service_id: serviceId, date_prevue: datePrevue, date_lecture: dateLecture || null };
+    if (existing) {
+      await supabase.from('planning_cr').update(row).eq('semaine', w);
+    } else {
+      await supabase.from('planning_cr').insert({ semaine: w, ...row });
+    }
+    setPlanningCR(p => ({ ...p, [w]: { ...p[w], serviceId, datePrevue, dateLecture: dateLecture || null } }));
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Modal title="Planifier un CR de réunion CoDcad" onClose={onClose}>
+      <Select label="Numéro de la semaine" value={semaine} onChange={setSemaine} options={semaineOpts} required />
+      <Select label="Service" value={serviceId} onChange={setSvc} options={svcOpts} required placeholder="Choisir un service…" />
+      <Input label="Date prévue" value={datePrevue} onChange={handleDatePrevue} type="date" />
+      <Input
+        label="Date de lecture du CR"
+        value={dateLecture}
+        onChange={canEdit ? setDateLecture : undefined}
+        type="date"
+        disabled={!canEdit}
+      />
+      {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Planifier'}</Btn>
+    </Modal>
+  );
+}
+
+/* ── Modal View Charte ── */
+function ViewCharteModal({ moisNum, entry, onClose }) {
+  const moisNom = MOIS_NOMS[moisNum - 1];
+  const svc     = SERVICES.find(s => s.id === entry?.serviceId);
+  return (
+    <Modal title={`Charte Éthique — ${moisNom}`} onClose={onClose}>
+      <Row label="Mois"         value={`${moisNom} ${ANNEE_COURANTE}`} />
+      <Row label="Service"      value={svc ? `${svc.abbr} — ${svc.nom}` : '—'} />
+      <Row label="Principe"     value={entry?.principe} />
+      <Row label="Date prévue"  value={entry?.dateSoumis ? fmtDate(entry.dateSoumis) : '—'} />
+    </Modal>
+  );
+}
+
+/* ── Modal View CR ── */
+function ViewCRModal({ semaine, entry, onClose }) {
+  const svc = SERVICES.find(s => s.id === entry?.serviceId);
+  return (
+    <Modal title={`CR CoDcad — Semaine ${semaine}`} onClose={onClose}>
+      <Row label="Semaine"         value={`${semaine} — ${ANNEE_COURANTE}`} />
+      <Row label="Service"         value={svc ? `${svc.abbr} — ${svc.nom}` : '—'} />
+      <Row label="Date prévue"     value={entry?.datePrevue  ? fmtDate(entry.datePrevue)  : '—'} />
+      <Row label="Date de lecture" value={entry?.dateLecture ? fmtDate(entry.dateLecture) : '—'} />
+    </Modal>
+  );
+}
+
+/* ── Modal Éditer Charte ── */
 function EditCharteModal({ moisNum, entry, setPlanningCharte, isAdmin, onDelete, onClose }) {
   const [serviceId, setSvc]     = useState(entry?.serviceId || '');
   const [principe, setPrincipe] = useState(entry?.principe || '');
@@ -299,10 +429,7 @@ function EditCharteModal({ moisNum, entry, setPlanningCharte, isAdmin, onDelete,
   };
 
   return (
-    <Modal title={`Charte Éthique — ${moisNom}`} onClose={onClose}>
-      <div style={{ fontSize: 12, color: C.sec, marginBottom: 12 }}>
-        <strong>Mois :</strong> {moisNom} {new Date().getFullYear()}
-      </div>
+    <Modal title={`Modifier — ${moisNom}`} sub={`Charte Éthique ${ANNEE_COURANTE}`} onClose={onClose}>
       <Select label="Service" value={serviceId} onChange={setSvc} options={svcOpts} placeholder="Choisir un service…" />
       <Select label="Principes et valeurs" value={principe} onChange={setPrincipe} options={principeOpts} placeholder="Choisir un principe…" />
       <Input label="Date prévue" value={datePrevue} onChange={setDate} type="date" />
@@ -316,76 +443,45 @@ function EditCharteModal({ moisNum, entry, setPlanningCharte, isAdmin, onDelete,
   );
 }
 
-/* ── Modal Planifier CR ── */
-function PlanifierCRModal({ planningCR, setPlanningCR, user, onClose }) {
-  const lastWeek = lastIsoWeekOfYear(ANNEE_COURANTE);
-  const [semaine, setSemaine] = useState(String(SEMAINE_COURANTE));
-  const [serviceId, setSvc]   = useState('');
-  const [datePrevue, setDate] = useState(today());
-  const [saving, setSaving]   = useState(false);
-  const [err, setErr]         = useState('');
+/* ── Modal Éditer CR ── */
+function EditCRModal({ semaine, entry, setPlanningCR, isAdmin, canEditLecture, onDelete, onClose }) {
+  const [serviceId, setSvc]           = useState(entry?.serviceId || '');
+  const [datePrevue, setDatePrevue]   = useState(entry?.datePrevue  || today());
+  const [dateLecture, setDateLecture] = useState(entry?.dateLecture || addDays(entry?.datePrevue || today(), 7));
+  const [saving, setSaving]           = useState(false);
 
-  const semaineOpts = Array.from({ length: lastWeek }, (_, i) => ({
-    value: String(i + 1),
-    label: `Semaine ${i + 1}${i + 1 === SEMAINE_COURANTE ? ' (actuelle)' : ''}`,
-  }));
   const svcOpts = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 28)}…` }));
 
-  const submit = async () => {
-    if (!semaine || !serviceId) { setErr('Semaine et service sont requis.'); return; }
-    setSaving(true);
-    const w = parseInt(semaine);
-    const { data: existing } = await supabase.from('planning_cr').select('id').eq('semaine', w).maybeSingle();
-    if (existing) {
-      await supabase.from('planning_cr').update({ service_id: serviceId, date_prevue: datePrevue }).eq('semaine', w);
-    } else {
-      await supabase.from('planning_cr').insert({ semaine: w, service_id: serviceId, date_prevue: datePrevue });
-    }
-    setPlanningCR(p => ({ ...p, [w]: { ...p[w], serviceId, datePrevue } }));
-    setSaving(false);
-    onClose();
+  const handleDatePrevue = (val) => {
+    setDatePrevue(val);
+    if (!entry?.dateLecture) setDateLecture(addDays(val, 7));
   };
-
-  return (
-    <Modal title="Planifier un CR de réunion CoDcad" onClose={onClose}>
-      <Select label="Numéro de la semaine" value={semaine} onChange={setSemaine} options={semaineOpts} required />
-      <Select label="Service" value={serviceId} onChange={setSvc} options={svcOpts} required placeholder="Choisir un service…" />
-      <Input label="Date prévue" value={datePrevue} onChange={setDate} type="date" />
-      {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Planifier'}</Btn>
-    </Modal>
-  );
-}
-
-/* ── Modal Éditer CR (clic sur entrée) ── */
-function EditCRModal({ semaine, entry, setPlanningCR, isAdmin, onDelete, onClose }) {
-  const [serviceId, setSvc]   = useState(entry?.serviceId || '');
-  const [datePrevue, setDate] = useState(entry?.datePrevue || today());
-  const [saving, setSaving]   = useState(false);
-
-  const svcOpts = SERVICES.map(s => ({ value: s.id, label: `${s.abbr} — ${s.nom.substring(0, 28)}…` }));
 
   const save = async () => {
     setSaving(true);
+    const row = { service_id: serviceId || null, date_prevue: datePrevue, date_lecture: dateLecture || null };
     const { data: existing } = await supabase.from('planning_cr').select('id').eq('semaine', semaine).maybeSingle();
     if (existing) {
-      await supabase.from('planning_cr').update({ service_id: serviceId || null, date_prevue: datePrevue }).eq('semaine', semaine);
+      await supabase.from('planning_cr').update(row).eq('semaine', semaine);
     } else {
-      await supabase.from('planning_cr').insert({ semaine, service_id: serviceId || null, date_prevue: datePrevue });
+      await supabase.from('planning_cr').insert({ semaine, ...row });
     }
-    setPlanningCR(p => ({ ...p, [semaine]: { ...p[semaine], serviceId, datePrevue } }));
+    setPlanningCR(p => ({ ...p, [semaine]: { ...p[semaine], serviceId, datePrevue, dateLecture: dateLecture || null } }));
     setSaving(false);
     onClose();
   };
 
   return (
-    <Modal title={`CR CoDcad — Semaine ${semaine}`} onClose={onClose}>
-      <div style={{ fontSize: 12, color: C.sec, marginBottom: 12 }}>
-        <strong>Semaine :</strong> {semaine} — {ANNEE_COURANTE}
-        {semaine === SEMAINE_COURANTE && <span style={{ marginLeft: 8, background: C.vert, color: C.blanc, borderRadius: 6, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>ACTUELLE</span>}
-      </div>
+    <Modal title={`CR CoDcad — Semaine ${semaine}`} sub={String(ANNEE_COURANTE)} onClose={onClose}>
       <Select label="Service" value={serviceId} onChange={setSvc} options={svcOpts} placeholder="Choisir un service…" />
-      <Input label="Date prévue" value={datePrevue} onChange={setDate} type="date" />
+      <Input label="Date prévue" value={datePrevue} onChange={handleDatePrevue} type="date" />
+      <Input
+        label="Date de lecture du CR"
+        value={dateLecture}
+        onChange={canEditLecture ? setDateLecture : undefined}
+        type="date"
+        disabled={!canEditLecture}
+      />
       <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer les modifications'}</Btn>
       {isAdmin && (
         <button onClick={onDelete} style={{ width: '100%', marginTop: 8, padding: '10px 0', background: '#FEF2F2', color: C.urg, border: `1.5px solid #FECACA`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>

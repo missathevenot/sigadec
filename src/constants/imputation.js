@@ -1,27 +1,70 @@
-// Liste officielle des mentions pour "Imputée à" / "Imputé à"
-export const IMPUTE_LABELS = [
-  'CT COMOE',
-  'CT TIMITEY',
-  'SD DIOMANDE',
-  'SD DOUMBIA',
-  'SD BLON',
-  'SD KONE',
-  'SPSTC',
-  'SESC',
-  'SSPDDA',
-  'SCR (Réseaux)',
-  'SDIC',
-  'SVRC',
-  'SEFR',
-  'SEI',
-  'SCOAIF',
-  'SARIF',
-  'SCR (Contentieux)',
-  'SCAFR',
-  'SEP',
-  'SCTF',
-  'SAFIC',
+// Valeurs stockées (clé courte) + libellés complets pour la liste déroulante
+export const IMPUTE_OPTIONS = [
+  { value: 'CT COMOE',          label: 'CT COMOE' },
+  { value: 'CT TIMITEY',        label: 'CT TIMITEY' },
+  { value: 'SD DIOMANDE',       label: 'SD DIOMANDE' },
+  { value: 'SD DOUMBIA',        label: 'SD DOUMBIA' },
+  { value: 'SD BLON',           label: 'SD BLON' },
+  { value: 'SD KONE',           label: 'SD KONE' },
+  { value: 'SPSTC',             label: 'SPSTC - Service de la Prospection et du Suivi-évaluation des Travaux Cadastraux' },
+  { value: 'SESC',              label: 'SESC - Service des Études et des Statistiques Cadastrales' },
+  { value: 'SSPDDA',            label: 'SSPDDA - Service du Suivi des Projets Digitaux' },
+  { value: 'SCR (Réseaux)',     label: 'SCR - Service du Cadastre de Réseaux' },
+  { value: 'SDIC',              label: 'SDIC - Service de la Documentation et de l\'Information Cadastrale' },
+  { value: 'SVRC',              label: 'SVRC - Service des Valeurs de Références Cadastrales' },
+  { value: 'SEFR',              label: 'SEFR - Service des Enquêtes Foncières et du Recoupement' },
+  { value: 'SEI',               label: 'SEI - Service des Evaluations Immobilières' },
+  { value: 'SCOAIF',            label: 'SCOAIF - Service de la Coordination des Opérations d\'Assiette de l\'Impôt Foncier' },
+  { value: 'SARIF',             label: 'SARIF - Service d\'Appui au Recouvrement de l\'Impôt Foncier' },
+  { value: 'SCR (Contentieux)', label: 'SCR - Service des Contentieux et des Réformes' },
+  { value: 'SCAFR',             label: 'SCAFR - Service de la Coordination des Activités Foncières Rurales' },
+  { value: 'SEP',               label: 'SEP - Service de l\'Equipement et de la Production' },
+  { value: 'SCTF',              label: 'SCTF - Service de la Coordination des Travaux Foncier' },
+  { value: 'SAFIC',             label: 'SAFIC - Service des Applicatifs de la Fiscalité Immobilière et Cadastrale' },
 ];
 
-export const IMPUTE_OPTIONS   = IMPUTE_LABELS.map(v => ({ value: v, label: v }));
+export const IMPUTE_LABELS    = IMPUTE_OPTIONS.map(o => o.value);
 export const EMIS_PAR_OPTIONS = [{ value: 'DCAD', label: 'DCAD' }, ...IMPUTE_OPTIONS];
+
+// Mapping serviceId → valeur d'imputation correspondante
+export const SERVICE_TO_IMPUTE_VALUE = {
+  's0':  'SAFIC',
+  's1':  'SPSTC',
+  's2':  'SESC',
+  's3':  'SCOAIF',
+  's4':  'SARIF',
+  's5':  'SCR (Contentieux)',
+  's6':  'SCTF',
+  's7':  'SCAFR',
+  's8':  'SEP',
+  's9':  'SDIC',
+  's10': 'SSPDDA',
+  's11': 'SCR (Réseaux)',
+  's12': 'SEI',
+  's13': 'SEFR',
+  's14': 'SVRC',
+};
+
+/**
+ * Retourne les identifiants d'imputation correspondant à un utilisateur
+ * (pour filtrer les diligences/courriers qui lui ont été imputés).
+ */
+export function getUserImputeIds(user) {
+  const ids = [];
+  if (user.role === 'conseiller_tech') {
+    const n = (user.nom || '').toUpperCase();
+    if (n.includes('COMOE'))   ids.push('CT COMOE');
+    if (n.includes('TIMITEY')) ids.push('CT TIMITEY');
+  }
+  if (user.role === 'sous_directeur') {
+    const n = (user.nom || '').toUpperCase();
+    if (n.includes('DIOMANDE')) ids.push('SD DIOMANDE');
+    if (n.includes('DOUMBIA'))  ids.push('SD DOUMBIA');
+    if (n.includes('BLON'))     ids.push('SD BLON');
+    if (n.includes('KONE'))     ids.push('SD KONE');
+  }
+  if (user.serviceId && SERVICE_TO_IMPUTE_VALUE[user.serviceId]) {
+    ids.push(SERVICE_TO_IMPUTE_VALUE[user.serviceId]);
+  }
+  return ids;
+}
