@@ -1,9 +1,12 @@
 import { C } from '../../constants/colors';
 
-export default function UploadZone({ label, fichierNom, setFichierNom, required = false }) {
+export default function UploadZone({ label, fichierNom, setFichierNom, onFile, required = false }) {
   const handleChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) setFichierNom(file.name);
+    if (file) {
+      setFichierNom(file.name);
+      if (onFile) onFile(file);
+    }
   };
   return (
     <div style={{ marginBottom: 12 }}>

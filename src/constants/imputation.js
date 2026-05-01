@@ -45,6 +45,24 @@ export const SERVICE_TO_IMPUTE_VALUE = {
   's14': 'SVRC',
 };
 
+// Sous-Directions disponibles dans Documentation
+export const SOUS_DIR_OPTIONS = [
+  { value: 'SD Information Cadastrale',            label: 'SD Information Cadastrale' },
+  { value: 'SD Assiette et du Contrôle IF',        label: 'SD Assiette et du Contrôle IF' },
+  { value: 'SD Production, Travaux Fonciers',      label: 'SD Production, Travaux Fonciers' },
+  { value: 'SD Evaluation, Expertise Immobilière', label: 'SD Evaluation, Expertise Immobilière' },
+];
+
+/**
+ * Retourne le libellé IMPUTE complet pour un serviceId
+ * (ex: 'SCR - Service du Cadastre de Réseaux')
+ */
+export function getImputeLabelForService(serviceId) {
+  const val = SERVICE_TO_IMPUTE_VALUE[serviceId];
+  if (!val) return null;
+  return IMPUTE_OPTIONS.find(o => o.value === val)?.label || val;
+}
+
 /**
  * Retourne les identifiants d'imputation correspondant à un utilisateur
  * (pour filtrer les diligences/courriers qui lui ont été imputés).

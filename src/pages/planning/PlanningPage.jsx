@@ -3,6 +3,7 @@ import { C } from '../../constants/colors';
 import { SERVICES } from '../../constants/services';
 import { MOIS_NOMS } from '../../constants/mois';
 import { PRINCIPES_VALEURS } from '../../constants/principes';
+import { getImputeLabelForService } from '../../constants/imputation';
 import { fmtDate, today, addDays } from '../../utils/dates';
 import { isoWeek } from '../../utils/refs';
 import { supabase } from '../../lib/supabase';
@@ -213,8 +214,10 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
                       <div style={{ fontSize: 11, color: C.cours, marginTop: 2 }}>📖 Date lecture : {fmtDate(dateLecture)}</div>
                     )}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 12, color: C.vert, fontWeight: 700 }}>{svc?.abbr || '—'}</div>
+                  <div style={{ textAlign: 'right', maxWidth: 160 }}>
+                    <div style={{ fontSize: 11, color: C.vert, fontWeight: 700, textAlign: 'right', lineHeight: 1.3 }}>
+                      {getImputeLabelForService(serviceId) || svc?.abbr || '—'}
+                    </div>
                     {depose
                       ? <div style={{ fontSize: 10, color: C.ok,  fontWeight: 600 }}>✅ Déposé</div>
                       : <div style={{ fontSize: 10, color: C.sec }}>⏳ En attente</div>
