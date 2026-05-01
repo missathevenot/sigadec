@@ -1,19 +1,27 @@
-import { SERVICES } from './services';
-
-// Mentions spéciales (CT/SD) + abréviations des services
-const SPECIALS = [
-  'CT COMOE', 'CT TIMITEY',
-  'SD BLON', 'SD', 'SD DIOMANDE', 'SD DOUMBIA', 'SD KONE',
+// Liste officielle des mentions pour "Imputée à" / "Imputé à"
+export const IMPUTE_LABELS = [
+  'CT COMOE',
+  'CT TIMITEY',
+  'SD DIOMANDE',
+  'SD DOUMBIA',
+  'SD BLON',
+  'SD KONE',
+  'SPSTC',
+  'SESC',
+  'SSPDDA',
+  'SCR (Réseaux)',
+  'SDIC',
+  'SVRC',
+  'SEFR',
+  'SEI',
+  'SCOAIF',
+  'SARIF',
+  'SCR (Contentieux)',
+  'SCAFR',
+  'SEP',
+  'SCTF',
+  'SAFIC',
 ];
 
-// Champ "Imputée à" (diligences) et "Imputé" (courrier reçu)
-export const IMPUTE_OPTIONS = [
-  ...SPECIALS,
-  ...SERVICES.map(s => s.abbr),
-].map(v => ({ value: v, label: v }));
-
-// Champ "Emis par" (courrier émis) : DCAD en tête
-export const EMIS_PAR_OPTIONS = [
-  { value: 'DCAD', label: 'DCAD' },
-  ...IMPUTE_OPTIONS,
-];
+export const IMPUTE_OPTIONS   = IMPUTE_LABELS.map(v => ({ value: v, label: v }));
+export const EMIS_PAR_OPTIONS = [{ value: 'DCAD', label: 'DCAD' }, ...IMPUTE_OPTIONS];

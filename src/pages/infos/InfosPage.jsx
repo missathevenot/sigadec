@@ -25,6 +25,9 @@ export default function InfosPage({ infos, setInfos, user }) {
   const [filtre, setFiltre]         = useState('all');
   const [modalOpen, setModal]       = useState(false);
   const [selectedInfo, setSelected] = useState(null);
+  const [editingInfo, setEditing]   = useState(null);
+
+  const canAct = user.role !== 'secretariat';
 
   const filtered = infos
     .filter(i => {
@@ -69,15 +72,19 @@ export default function InfosPage({ infos, setInfos, user }) {
             const st     = INFO_STATUTS.find(s => s.v === inf.statut);
             const auteur = (users.length ? users : USERS).find(u => u.id === inf.auteurId);
             return (
-              <Card key={inf.id} style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => setSelected(inf)}>
+              <Card key={inf.id} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace' }}>{inf.reference}</div>
                   {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 6, lineHeight: 1.4 }}>{inf.titre}</div>
                 {inf.description && <div style={{ fontSize: 12, color: C.sec, marginBottom: 6, lineHeight: 1.5 }}>{inf.description}</div>}
-                <div style={{ fontSize: 11, color: C.sec }}>
+                <div style={{ fontSize: 11, color: C.sec, marginBottom: 8 }}>
                   {auteur ? `${auteur.prenom} ${auteur.nom}` : '—'} · {fmtDate(inf.dateSubmission)}
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <InfoBtn label="👁 Afficher"  color={C.cours} bg={C.coursB} onClick={() => setSelected(inf)} />
+                  {canAct && <InfoBtn label="✏️ Modifier" color={C.vert}  bg={C.vertL}  onClick={() => setEditing(inf)} />}
                 </div>
               </Card>
             );
@@ -95,7 +102,19 @@ export default function InfosPage({ infos, setInfos, user }) {
           onDeleted={() => { setSelected(null); }}
         />
       )}
+      {editingInfo && <EditInfoModal info={editingInfo} setInfos={setInfos} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+function InfoBtn({ label, color, bg, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: '5px 10px', borderRadius: 8, border: `1px solid ${color}`,
+      background: bg, color, fontWeight: 700, fontSize: 11, cursor: 'pointer',
+    }}>
+      {label}
+    </button>
   );
 }
 

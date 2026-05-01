@@ -212,7 +212,7 @@ function RegisterView({ onBack, onDone, setUsers }) {
 
         <Input label="Prénom" value={prenom} onChange={setPrenom} required />
         <Input label="Nom" value={nom} onChange={setNom} required />
-        <Input label="Email professionnel" value={email} onChange={setEmail} type="email" required />
+        <Input label="Email" value={email} onChange={setEmail} type="email" required />
         <Select label="Rôle" value={role} onChange={setRole} options={roleOptions} required placeholder="Sélectionner un rôle…" />
         {needService && <Select label="Service" value={serviceId} onChange={setSvc} options={serviceOptions} required placeholder="Sélectionner un service…" />}
         {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}

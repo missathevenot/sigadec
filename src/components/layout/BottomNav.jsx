@@ -3,13 +3,17 @@ import { C } from '../../constants/colors';
 const ALL_TABS = [
   { id: 'dashboard',  icon: '🏠', label: 'Accueil' },
   { id: 'diligences', icon: '◎',  label: 'Diligences', hideFor: ['secretariat'] },
-  { id: 'courriers',  icon: '✉️',  label: 'Courriers' },
+  { id: 'courriers',  icon: '✉️',  label: 'Courriers',  strictAdmin: true },
   { id: 'infos',      icon: '📋', label: 'Infos' },
   { id: 'mon-espace', icon: '👤', label: 'Espace' },
 ];
 
 export default function BottomNav({ page, navigate, user }) {
-  const tabs = ALL_TABS.filter(t => !t.hideFor?.includes(user?.role));
+  const tabs = ALL_TABS.filter(t => {
+    if (t.hideFor?.includes(user?.role)) return false;
+    if (t.strictAdmin && user?.role !== 'admin') return false;
+    return true;
+  });
 
   const isActive = (id) => page === id || (id === 'diligences' && page === 'diligence-detail') || (id === 'courriers' && page === 'courrier-detail');
 

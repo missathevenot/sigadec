@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import Input from '../../components/ui/Input';
+import MultiSelectImpute from '../../components/ui/MultiSelectImpute';
 
 export default function DiligenceDetail({ diligence, diligences, setDiligences, courriers, user, navigate }) {
   const [modalUpdate, setModalUpdate] = useState(false);
@@ -56,7 +57,17 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
       </div>
 
       <Card style={{ marginBottom: 12 }}>
-        <Row label="Imputée à"  value={diligence.imputeA || '—'} />
+        <div style={{ paddingBlock: 6, borderBottom: `1px solid ${C.bord}` }}>
+          <span style={{ fontSize: 12, color: C.sec, fontWeight: 600 }}>Imputée à</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+            {(Array.isArray(diligence.imputeA) ? diligence.imputeA : [diligence.imputeA]).filter(Boolean).length > 0
+              ? (Array.isArray(diligence.imputeA) ? diligence.imputeA : [diligence.imputeA]).filter(Boolean).map(v => (
+                <span key={v} style={{ background: C.coursB, color: C.cours, borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{v}</span>
+              ))
+              : <span style={{ fontSize: 13, color: C.sec }}>—</span>
+            }
+          </div>
+        </div>
         <Row label="Soumis le"  value={fmtDate(diligence.dateSubmission)} />
         <Row label="Échéance"   value={fmtDate(diligence.echeance)} />
       </Card>
@@ -156,20 +167,25 @@ function Row({ label, value }) {
 }
 
 function EditModal({ diligence, setDiligences, onClose }) {
-  const [intitule, setIntitule]   = useState(diligence.intitule);
-  const [imputeA, setImputeA]     = useState(diligence.imputeA || '');
-  const [echeance, setEcheance]   = useState(diligence.echeance || '');
-  const [description, setDesc]    = useState(diligence.description || '');
-  const [saving, setSaving]       = useState(false);
-  const [err, setErr]             = useState('');
+  const [intitule, setIntitule] = useState(diligence.intitule);
+  const [imputeA, setImputeA]   = useState(Array.isArray(diligence.imputeA) ? diligence.imputeA : []);
+  const [echeance, setEcheance] = useState(diligence.echeance || '');
+  const [description, setDesc]  = useState(diligence.description || '');
+  const [statut, setStatut]     = useState(diligence.statut);
+  const [progression, setProg]  = useState(diligence.progression ?? 0);
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState('');
 
   const save = async () => {
     if (!intitule.trim()) { setErr("L'objet est requis."); return; }
     setSaving(true);
-    const updates = { intitule: intitule.trim(), impute_a: imputeA || null, echeance, description };
+    const updates = {
+      intitule: intitule.trim(), impute_a: imputeA, echeance,
+      description, statut, progression: Number(progression),
+    };
     await supabase.from('diligences').update(updates).eq('id', diligence.id);
     setDiligences(ds => ds.map(d => d.id === diligence.id
-      ? { ...d, intitule: intitule.trim(), imputeA, echeance, description }
+      ? { ...d, intitule: intitule.trim(), imputeA, echeance, description, statut, progression: Number(progression) }
       : d));
     setSaving(false);
     onClose();
@@ -178,7 +194,14 @@ function EditModal({ diligence, setDiligences, onClose }) {
   return (
     <Modal title="Modifier la diligence" sub={diligence.reference} onClose={onClose}>
       <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
-      <Select label="Imputée à" value={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+      <MultiSelectImpute label="Imputée à" selected={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+      <Select label="Statut" value={statut} onChange={setStatut} options={DIL_STATUTS.map(s => ({ value: s.v, label: s.l }))} required />
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 4 }}>
+          Taux de réalisation : <span style={{ color: C.vert, fontWeight: 800 }}>{progression}%</span>
+        </label>
+        <input type="range" min={0} max={100} value={progression} onChange={e => setProg(e.target.value)} style={{ width: '100%', accentColor: C.vert }} />
+      </div>
       <Input label="Date d'échéance" value={echeance} onChange={setEcheance} type="date" />
       <Textarea label="Description" value={description} onChange={setDesc} rows={3} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}

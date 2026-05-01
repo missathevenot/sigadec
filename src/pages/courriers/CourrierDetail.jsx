@@ -11,6 +11,7 @@ import Modal from '../../components/ui/Modal';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import Input from '../../components/ui/Input';
+import MultiSelectImpute from '../../components/ui/MultiSelectImpute';
 
 export default function CourrierDetail({ courrier, courriers, setCourriers, user, navigate }) {
   const [modalUpdate, setModalUpdate] = useState(false);
@@ -51,8 +52,18 @@ export default function CourrierDetail({ courrier, courriers, setCourriers, user
       </div>
 
       <Card style={{ marginBottom: 12 }}>
-        {courrier.sens === 'recu' && courrier.imputeA && (
-          <Row label="Imputé"        value={courrier.imputeA} />
+        {courrier.sens === 'recu' && (
+          <div style={{ paddingBlock: 6, borderBottom: `1px solid ${C.bord}` }}>
+            <div style={{ fontSize: 12, color: C.sec, fontWeight: 600, marginBottom: 4 }}>Imputé à</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {(Array.isArray(courrier.imputeA) ? courrier.imputeA : (courrier.imputeA ? [courrier.imputeA] : [])).length > 0
+                ? (Array.isArray(courrier.imputeA) ? courrier.imputeA : [courrier.imputeA]).map(v => (
+                    <span key={v} style={{ background: C.coursB, color: C.cours, borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{v}</span>
+                  ))
+                : <span style={{ fontSize: 13, color: C.sec }}>—</span>
+              }
+            </div>
+          </div>
         )}
         {courrier.sens === 'emis' && courrier.emisPar && (
           <Row label="Emis par"      value={courrier.emisPar} />
@@ -133,7 +144,7 @@ function Row({ label, value }) {
 
 function EditModal({ courrier, setCourriers, onClose }) {
   const [objet, setObjet]     = useState(courrier.objet);
-  const [imputeA, setImputeA] = useState(courrier.imputeA || '');
+  const [imputeA, setImputeA] = useState(Array.isArray(courrier.imputeA) ? courrier.imputeA : (courrier.imputeA ? [courrier.imputeA] : []));
   const [emisPar, setEmisPar] = useState(courrier.emisPar || '');
   const [dateEm, setDateEm]   = useState(courrier.dateEmission || '');
   const [corps, setCorps]     = useState(courrier.corps || '');
@@ -145,7 +156,7 @@ function EditModal({ courrier, setCourriers, onClose }) {
     setSaving(true);
     const updates = {
       objet: objet.trim(),
-      impute_a:      courrier.sens === 'recu'  ? (imputeA || null) : courrier.imputeA,
+      impute_a:      courrier.sens === 'recu'  ? imputeA : courrier.imputeA,
       emis_par:      courrier.sens === 'emis'  ? (emisPar || null) : courrier.emisPar,
       date_emission: dateEm,
       corps,
@@ -162,7 +173,7 @@ function EditModal({ courrier, setCourriers, onClose }) {
     <Modal title="Modifier le courrier" sub={courrier.reference} onClose={onClose}>
       <Input label="Objet" value={objet} onChange={setObjet} required />
       {courrier.sens === 'recu' && (
-        <Select label="Imputé" value={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
+        <MultiSelectImpute label="Imputé à" selected={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
       )}
       {courrier.sens === 'emis' && (
         <Select label="Emis par" value={emisPar} onChange={setEmisPar} options={EMIS_PAR_OPTIONS} placeholder="Choisir…" />

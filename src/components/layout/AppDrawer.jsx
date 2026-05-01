@@ -11,7 +11,7 @@ const MENU_ITEMS = [
   { id: 'infos',      icon: '📋', label: 'Informations / Divers' },
   { id: 'rapports',   icon: '📄', label: 'Documentation' },
   { id: 'planning',   icon: '📅', label: 'Planning Annuel', hideFor: ['secretariat'] },
-  { id: 'courriers',  icon: '✉️',  label: 'Courriers' },
+  { id: 'courriers',  icon: '✉️',  label: 'Courriers',            strictAdmin: true },
   { id: 'emi-rec',    icon: '💰', label: 'Émissions / Recettes', emiRec: true },
   { id: 'notifications', icon: '🔔', label: 'Notifications' },
   { id: 'profile',    icon: '🪪',  label: 'Mon Profil' },
@@ -26,6 +26,7 @@ export default function AppDrawer({ open, user, navigate, onClose, onLogout, cur
   const items = MENU_ITEMS.filter(item => {
     if (item.hideFor?.includes(user?.role)) return false;
     if (item.adminOnly && !['admin','directeur'].includes(user?.role)) return false;
+    if (item.strictAdmin && user?.role !== 'admin') return false;
     if (item.emiRec && !canReadEmiRec(user)) return false;
     return true;
   });

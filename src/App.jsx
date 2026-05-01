@@ -62,8 +62,8 @@ export default function App() {
       {page === 'diligence-detail'   && user.role !== 'secretariat' && <DiligenceDetail diligence={diligences.find(d => d.id === pageParams.id)} diligences={diligences} setDiligences={setDiligences} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
       {page === 'rapports'           && <RapportsPage rapports={rapports} setRapports={setRapports} user={user} />}
       {page === 'planning'           && user.role !== 'secretariat' && <PlanningPage {...sp} rapports={rapports} />}
-      {page === 'courriers'          && <CourriersPage courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
-      {page === 'courrier-detail'    && <CourrierDetail courrier={courriers.find(c => c.id === pageParams.id)} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
+      {page === 'courriers'          && user.role === 'admin' && <CourriersPage courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
+      {page === 'courrier-detail'    && user.role === 'admin' && <CourrierDetail courrier={courriers.find(c => c.id === pageParams.id)} courriers={courriers} setCourriers={setCourriers} user={user} navigate={navigate} />}
       {page === 'emi-rec'            && canReadEmiRec(user) && <EmiRecPage user={user} emissions={emissions} setEmissions={setEmissions} recettes={recettes} setRecettes={setRecettes} />}
       {page === 'notifications'      && <NotificationsPage notifications={notifications} setNotifications={setNotifications} />}
       {page === 'profile'            && <ProfilePage user={user} />}

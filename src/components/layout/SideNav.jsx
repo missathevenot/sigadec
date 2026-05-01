@@ -9,7 +9,7 @@ const MENU_ITEMS = [
   { id: 'dashboard',     icon: '🏠', label: 'Tableau de bord' },
   { id: 'mon-espace',    icon: '👤', label: 'Mon Espace' },
   { id: 'diligences',    icon: '◎',  label: 'Diligences',           hideFor: ['secretariat'] },
-  { id: 'courriers',     icon: '✉️',  label: 'Courriers' },
+  { id: 'courriers',     icon: '✉️',  label: 'Courriers',            strictAdmin: true },
   { id: 'infos',         icon: '📋', label: 'Informations / Divers' },
   { id: 'rapports',      icon: '📄', label: 'Documentation' },
   { id: 'planning',      icon: '📅', label: 'Planning Annuel',       hideFor: ['secretariat'] },
@@ -30,6 +30,7 @@ export default function SideNav({ user, navigate, currentPage, onLogout, unread 
   const items = MENU_ITEMS.filter(item => {
     if (item.hideFor?.includes(user?.role)) return false;
     if (item.adminOnly && !['admin', 'directeur'].includes(user?.role)) return false;
+    if (item.strictAdmin && user?.role !== 'admin') return false;
     if (item.emiRec && !canReadEmiRec(user)) return false;
     return true;
   });

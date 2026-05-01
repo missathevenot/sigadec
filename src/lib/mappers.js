@@ -9,7 +9,7 @@ export const mapUser = (u) => ({
 export const mapDiligence = (d) => ({
   id: d.id, reference: d.reference, intitule: d.intitule,
   assigneA: d.assigne_a, serviceIds: d.service_ids || [],
-  imputeA: d.impute_a || '',
+  imputeA: Array.isArray(d.impute_a) ? d.impute_a : (d.impute_a ? [d.impute_a] : []),
   statut: d.statut, progression: d.progression,
   dateSubmission: d.date_submission, echeance: d.echeance,
   description: d.description || '', courrierIds: d.courrier_ids || [],
@@ -26,7 +26,7 @@ export const mapCourrier = (c) => ({
   assigneARoleId: c.assigne_a_role_id, corps: c.corps || '',
   noteInterne: c.note_interne || '', relances: c.relances || [],
   objetDoc: c.objet_doc || '', fichierNom: c.fichier_nom || '',
-  imputeA: c.impute_a || '',
+  imputeA: Array.isArray(c.impute_a) ? c.impute_a : (c.impute_a ? [c.impute_a] : []),
   emisPar: c.emis_par || '',
 });
 
@@ -91,7 +91,7 @@ export const mapPlanningCRRows = (rows, basePlan) => {
 export const diligenceToDb = (d) => ({
   id: d.id, reference: d.reference, intitule: d.intitule,
   assigne_a: d.assigneA, service_ids: d.serviceIds,
-  impute_a: d.imputeA || null,
+  impute_a: Array.isArray(d.imputeA) ? d.imputeA : (d.imputeA ? [d.imputeA] : null),
   statut: d.statut, progression: d.progression,
   date_submission: d.dateSubmission, echeance: d.echeance,
   description: d.description, courrier_ids: d.courrierIds,
@@ -108,7 +108,7 @@ export const courrierToDb = (c) => ({
   assigne_a_role_id: c.assigneARoleId, corps: c.corps,
   note_interne: c.noteInterne, relances: c.relances,
   objet_doc: c.objetDoc, fichier_nom: c.fichierNom,
-  impute_a: c.imputeA || null,
+  impute_a: Array.isArray(c.imputeA) ? c.imputeA : (c.imputeA ? [c.imputeA] : null),
   emis_par: c.emisPar || null,
 });
 
