@@ -34,11 +34,17 @@ const TYPES = [
   { label: 'Rapport hebdomadaire de Sous-Direction',  prefix: 'RSD', hebdo: true },
 ];
 
-// Ouvre un fichier depuis le bucket Supabase 'documents'
-function openDoc(fichierNom) {
+// Ouvre un fichier depuis le bucket Supabase 'documents' (URL signée, expire après 1h)
+async function openDoc(fichierNom) {
   if (!fichierNom) return;
-  const { data } = supabase.storage.from('documents').getPublicUrl(fichierNom);
-  window.open(data.publicUrl, '_blank');
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .createSignedUrl(fichierNom, 3600);
+  if (error || !data?.signedUrl) {
+    alert('Impossible d\'ouvrir ce fichier. Il n\'existe peut-être pas encore dans le stockage.');
+    return;
+  }
+  window.open(data.signedUrl, '_blank');
 }
 
 // Détermine le libellé Auteur d'un rapport (nouveaux auteurIds ou ancien serviceId)

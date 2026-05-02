@@ -16,7 +16,7 @@ export const useStore = create((set) => ({
   pageParams: {},
   navigate: (page, params = {}) => set({ page, pageParams: params }),
 
-  // Data (vide au départ, chargé depuis Supabase)
+  // Data
   diligences:     [],
   courriers:      [],
   infos:          [],
@@ -30,9 +30,20 @@ export const useStore = create((set) => ({
   users:          [],
   loading:        true,
 
-  // Chargement initial depuis Supabase
+  // Chargement initial depuis Supabase + restauration de session
   initialize: async () => {
     set({ loading: true });
+
+    // Écoute les événements Supabase Auth (signOut depuis n'importe où)
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') set({ user: null });
+    });
+
+    // Vérifie la session persistée (localStorage) — permet la restauration après rechargement
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // Chargement de toutes les données en parallèle
+    // Note: utilisateurs ne charge PAS mot_de_passe — jamais exposé au client
     const [
       { data: dils },
       { data: cous },
@@ -52,10 +63,26 @@ export const useStore = create((set) => ({
       supabase.from('chartes').select('*').order('date', { ascending: false }),
       supabase.from('emissions').select('*').order('date', { ascending: false }),
       supabase.from('recettes').select('*').order('date', { ascending: false }),
-      supabase.from('utilisateurs').select('*'),
+      supabase.from('utilisateurs')
+        .select('id, prenom, nom, email, role, service_id, statut, photo_url, auth_migrated'),
       supabase.from('planning_charte').select('*').order('mois'),
       supabase.from('planning_cr').select('*').order('semaine'),
     ]);
+
+    // Restauration de l'utilisateur depuis la session Supabase Auth
+    let restoredUser = null;
+    if (session?.user?.email) {
+      const raw = (usrs || []).find(
+        u => u.email?.toLowerCase() === session.user.email.toLowerCase()
+      );
+      if (raw?.statut === 'actif') {
+        restoredUser = mapUser(raw);
+      } else {
+        // Session valide mais compte inactif → déconnexion forcée
+        await supabase.auth.signOut();
+      }
+    }
+
     const base = buildCRPlanning();
     set({
       diligences:     (dils  || []).map(mapDiligence),
@@ -66,13 +93,14 @@ export const useStore = create((set) => ({
       emissions:      (emis  || []).map(mapEmission),
       recettes:       (recs  || []).map(mapRecette),
       users:          (usrs  || []).map(mapUser),
-      planningCharte: mapPlanningCharteRows(plan || []),
-      planningCR:     mapPlanningCRRows(plan_cr || [], base),
+      planningCharte: mapPlanningCharteRows(plan    || []),
+      planningCR:     mapPlanningCRRows(plan_cr     || [], base),
+      user:           restoredUser,
       loading:        false,
     });
   },
 
-  // Setters locaux (état session)
+  // Setters locaux
   setDiligences:     (fn) => set(s => ({ diligences:     typeof fn === 'function' ? fn(s.diligences)     : fn })),
   setCourriers:      (fn) => set(s => ({ courriers:      typeof fn === 'function' ? fn(s.courriers)      : fn })),
   setInfos:          (fn) => set(s => ({ infos:          typeof fn === 'function' ? fn(s.infos)          : fn })),

@@ -2,8 +2,9 @@
 export const mapUser = (u) => ({
   id: u.id, prenom: u.prenom, nom: u.nom, email: u.email,
   role: u.role, serviceId: u.service_id, statut: u.statut,
-  motDePasse: u.mot_de_passe || null,
   photoUrl: u.photo_url || null,
+  authMigrated: u.auth_migrated || false,
+  // mot_de_passe intentionnellement exclu — jamais exposé côté client
 });
 
 export const mapDiligence = (d) => ({
@@ -152,4 +153,5 @@ export const userToDb = (u) => ({
   id: u.id, prenom: u.prenom, nom: u.nom, email: u.email,
   role: u.role, service_id: u.serviceId, statut: u.statut,
   photo_url: u.photoUrl || null,
+  auth_migrated: u.authMigrated || false,
 });

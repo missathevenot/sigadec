@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useStore } from './store';
 import { useResponsive } from './hooks/useResponsive';
 import { canReadEmiRec } from './utils/access';
+import { supabase } from './lib/supabase';
 
 import SplashScreen    from './components/layout/SplashScreen';
 import TopBar, { TOP_BAR_HEIGHT } from './components/layout/TopBar';
@@ -26,7 +27,7 @@ import AdminPage       from './pages/admin/AdminPage';
 
 export default function App() {
   const {
-    user, setUser, page, pageParams, navigate,
+    user, setUser, loading, page, pageParams, navigate,
     diligences, setDiligences, courriers, setCourriers,
     infos, setInfos, rapports, setRapports,
     chartes, setChartes, emissions, setEmissions, recettes, setRecettes,
@@ -43,12 +44,13 @@ export default function App() {
   const handleSplashDone = useCallback(() => setSplash(false), []);
   const unread = notifications.filter(n => !n.lu).length;
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut(); // efface la session + déclenche onAuthStateChange → user: null
     useStore.setState({ page: 'dashboard', pageParams: {} });
   };
 
   if (splash) return <SplashScreen onDone={handleSplashDone} />;
+  if (loading) return null; // Restauration de session en cours (très bref)
   if (!user)  return <AuthFlow />;
 
   const sp = { user, planningCharte, setPlanningCharte, planningCR, setPlanningCR };
