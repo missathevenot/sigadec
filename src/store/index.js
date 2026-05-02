@@ -5,6 +5,7 @@ import {
   mapCharte, mapEmission, mapRecette, mapPlanningCharteRows, mapPlanningCRRows,
 } from '../lib/mappers';
 import { buildCRPlanning } from '../data/plannings';
+import { buildDailyAlerts } from '../utils/alerts';
 
 export const useStore = create((set) => ({
   // Auth
@@ -30,20 +31,21 @@ export const useStore = create((set) => ({
   users:          [],
   loading:        true,
 
-  // Chargement initial depuis Supabase + restauration de session
+  // Chargement initial + restauration de session Supabase Auth
+  // Appelé au démarrage ET après chaque login (le RLS bloque les requêtes anonymes)
   initialize: async () => {
     set({ loading: true });
 
-    // Écoute les événements Supabase Auth (signOut depuis n'importe où)
+    // Écoute les événements Auth (déclenché par signOut depuis n'importe où)
     supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') set({ user: null });
+      if (event === 'SIGNED_OUT') set({ user: null, notifications: [] });
     });
 
-    // Vérifie la session persistée (localStorage) — permet la restauration après rechargement
+    // Vérifie la session persistée (localStorage) pour restaurer automatiquement
     const { data: { session } } = await supabase.auth.getSession();
 
-    // Chargement de toutes les données en parallèle
-    // Note: utilisateurs ne charge PAS mot_de_passe — jamais exposé au client
+    // Chargement de toutes les données (authentifié = données réelles, anonyme = tableaux vides)
+    // Note : utilisateurs ne contient JAMAIS mot_de_passe côté client
     const [
       { data: dils },
       { data: cous },
@@ -69,7 +71,7 @@ export const useStore = create((set) => ({
       supabase.from('planning_cr').select('*').order('semaine'),
     ]);
 
-    // Restauration de l'utilisateur depuis la session Supabase Auth
+    // Restauration de l'utilisateur depuis la session active
     let restoredUser = null;
     if (session?.user?.email) {
       const raw = (usrs || []).find(
@@ -83,9 +85,13 @@ export const useStore = create((set) => ({
       }
     }
 
+    // Calcul des alertes avec les données fraîches (si utilisateur actif)
+    const freshDils   = (dils || []).map(mapDiligence);
+    const freshAlerts = restoredUser ? buildDailyAlerts(freshDils, restoredUser) : [];
+
     const base = buildCRPlanning();
     set({
-      diligences:     (dils  || []).map(mapDiligence),
+      diligences:     freshDils,
       courriers:      (cous  || []).map(mapCourrier),
       infos:          (infs  || []).map(mapInfo),
       rapports:       (raps  || []).map(mapRapport),
@@ -96,6 +102,7 @@ export const useStore = create((set) => ({
       planningCharte: mapPlanningCharteRows(plan    || []),
       planningCR:     mapPlanningCRRows(plan_cr     || [], base),
       user:           restoredUser,
+      notifications:  freshAlerts,
       loading:        false,
     });
   },

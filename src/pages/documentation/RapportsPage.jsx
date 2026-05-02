@@ -34,17 +34,28 @@ const TYPES = [
   { label: 'Rapport hebdomadaire de Sous-Direction',  prefix: 'RSD', hebdo: true },
 ];
 
-// Ouvre un fichier depuis le bucket Supabase 'documents' (URL signée, expire après 1h)
+// Ouvre un fichier depuis le bucket 'documents' via URL signée (expire 1h)
+// Fonctionne pour tous les formats : PDF, Word (.docx/.doc), Excel (.xlsx/.xls), etc.
+// Le navigateur / l'OS choisit automatiquement l'application installée (Word, Excel,
+// Acrobat, Adobe Reader, WPS Office, lecteur PDF intégré…)
 async function openDoc(fichierNom) {
   if (!fichierNom) return;
   const { data, error } = await supabase.storage
     .from('documents')
     .createSignedUrl(fichierNom, 3600);
   if (error || !data?.signedUrl) {
-    alert('Impossible d\'ouvrir ce fichier. Il n\'existe peut-être pas encore dans le stockage.');
+    alert('Impossible d\'ouvrir ce fichier.\nVérifiez qu\'il a bien été téléversé dans le stockage.');
     return;
   }
-  window.open(data.signedUrl, '_blank');
+  // Ancre dynamique : contourne les bloqueurs de pop-up et fonctionne
+  // sur mobile comme sur desktop pour tous les types de fichiers
+  const a = document.createElement('a');
+  a.href = data.signedUrl;
+  a.target = '_blank';
+  a.rel   = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // Détermine le libellé Auteur d'un rapport (nouveaux auteurIds ou ancien serviceId)

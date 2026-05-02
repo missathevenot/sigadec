@@ -4,7 +4,6 @@ import { C } from '../../constants/colors';
 import { ROLES_LABELS, ROLES_SANS_SERVICE } from '../../constants/roles';
 import { SERVICES } from '../../constants/services';
 import { useStore } from '../../store';
-import { buildDailyAlerts } from '../../utils/alerts';
 import { supabase } from '../../lib/supabase';
 import { mapUser, userToDb } from '../../lib/mappers';
 import { compressImage } from '../../utils/imageUtils';
@@ -15,7 +14,7 @@ import Btn from '../../components/ui/Btn';
 
 export default function AuthFlow() {
   const [view, setView] = useState('login');
-  const { setUser, setNotifications, diligences, setUsers, users } = useStore();
+  const { setUser, setUsers, initialize } = useStore();
 
   return (
     <div style={{
@@ -24,7 +23,7 @@ export default function AuthFlow() {
       alignItems: 'center', justifyContent: 'center',
       padding: 20, maxWidth: 430, margin: '0 auto',
     }}>
-      {view === 'login'    && <LoginView onRegister={() => setView('register')} setUser={setUser} setNotifications={setNotifications} diligences={diligences} />}
+      {view === 'login'    && <LoginView onRegister={() => setView('register')} setUser={setUser} initialize={initialize} />}
       {view === 'register' && <RegisterView onBack={() => setView('login')} onDone={() => setView('confirm')} setUsers={setUsers} />}
       {view === 'confirm'  && <ConfirmView onBack={() => setView('login')} />}
     </div>
@@ -35,7 +34,7 @@ export default function AuthFlow() {
    LOGIN — flux multi-étapes
    email → password → (migrate | create_password)
 ───────────────────────────────────────────── */
-function LoginView({ onRegister, setUser, setNotifications, diligences }) {
+function LoginView({ onRegister, setUser, initialize }) {
   // Étapes : 'email' | 'password' | 'create_password' | 'migrate'
   const [step, setStep]         = useState('email');
   const [email, setEmail]       = useState('');
@@ -170,10 +169,11 @@ function LoginView({ onRegister, setUser, setNotifications, diligences }) {
   };
 
   const completeLogin = async (p) => {
-    const u = mapUser(p);
-    const alerts = buildDailyAlerts(diligences, u);
-    setNotifications(alerts);
-    setUser(u);
+    // Affichage rapide de l'utilisateur connecté
+    setUser(mapUser(p));
+    // Rechargement complet des données (le RLS bloquait les requêtes anonymes au démarrage)
+    // initialize() recharge les données, recalcule les alertes et confirme le user via session
+    await initialize();
   };
 
   const reset = () => { setStep('email'); setEmail(''); setPassword(''); setNewPwd(''); setCPwd(''); setProfil(null); setErr(''); };
