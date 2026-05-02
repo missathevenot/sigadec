@@ -90,17 +90,32 @@ export default function AppDrawer({ open, user, navigate, onClose, onLogout, cur
         ))}
       </nav>
 
-      <button
-        onClick={() => { onLogout(); onClose(); }}
-        style={{
-          margin: '10px 16px 24px', padding: '11px 0',
-          background: '#FEF2F2', color: C.urg,
-          border: `1.5px solid #FECACA`, borderRadius: 10,
-          fontWeight: 700, fontSize: 14, cursor: 'pointer',
-        }}
-      >
-        🚪 Se déconnecter
-      </button>
+      <div style={{ margin: '10px 16px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <a
+          href="Manuel_Utilisateur_SIGADEC.pdf"
+          download="Manuel_Utilisateur_SIGADEC.pdf"
+          style={{
+            display: 'block', padding: '11px 0',
+            background: C.coursB, color: C.cours,
+            border: `1.5px solid ${C.cours}`, borderRadius: 10,
+            fontWeight: 700, fontSize: 14, cursor: 'pointer',
+            textAlign: 'center', textDecoration: 'none',
+          }}
+        >
+          📥 Télécharger le manuel
+        </a>
+        <button
+          onClick={() => { onLogout(); onClose(); }}
+          style={{
+            padding: '11px 0',
+            background: '#FEF2F2', color: C.urg,
+            border: `1.5px solid #FECACA`, borderRadius: 10,
+            fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          }}
+        >
+          🚪 Se déconnecter
+        </button>
+      </div>
     </div>
   );
 }

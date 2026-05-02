@@ -117,8 +117,21 @@ export default function SideNav({ user, navigate, currentPage, onLogout, unread 
         })}
       </nav>
 
-      {/* Déconnexion */}
-      <div style={{ padding: '8px 12px 16px', flexShrink: 0 }}>
+      {/* Manuel + Déconnexion */}
+      <div style={{ padding: '8px 12px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <a
+          href="Manuel_Utilisateur_SIGADEC.pdf"
+          download="Manuel_Utilisateur_SIGADEC.pdf"
+          style={{
+            display: 'block', width: '100%', padding: '9px 0',
+            background: C.coursB, color: C.cours,
+            border: `1.5px solid ${C.cours}`, borderRadius: 10,
+            fontWeight: 700, fontSize: 12, cursor: 'pointer',
+            textAlign: 'center', textDecoration: 'none',
+          }}
+        >
+          📥 Télécharger le manuel
+        </a>
         <button
           onClick={onLogout}
           style={{
