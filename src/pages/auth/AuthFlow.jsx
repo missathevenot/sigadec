@@ -58,8 +58,18 @@ function LoginView({ onRegister, setUser, initialize }) {
       if (!data?.found) { setErr('Adresse email inconnue.'); return; }
       if (data.statut !== 'actif') { setErr('Ce compte est en attente de validation.'); return; }
 
-      setCheck({ hasOldPassword: data.has_old_password, authMigrated: data.auth_migrated });
-      setStep('password');
+      const check = { hasOldPassword: data.has_old_password, authMigrated: data.auth_migrated };
+      setCheck(check);
+
+      // Compte jamais configuré dans Supabase Auth → aller directement à la création du mot de passe
+      // (évite l'étape password inutile qui échouerait de toute façon)
+      if (!check.authMigrated && !check.hasOldPassword) {
+        setStep('create_password');
+      } else if (check.hasOldPassword) {
+        setStep('migrate');
+      } else {
+        setStep('password');
+      }
     } catch { setErr('Erreur de connexion. Réessayez.'); }
     finally { setLoading(false); }
   };
