@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { C } from '../constants/colors';
 import { ROLES_LABELS } from '../constants/roles';
 import { SERVICES } from '../constants/services';
-import { DIL_STATUTS, INFO_STATUTS } from '../constants/statuts';
+import { INFO_STATUTS } from '../constants/statuts';
 import { getUserImputeIds } from '../constants/imputation';
 import { fmtDate } from '../utils/dates';
 import { MOIS_COURANT, SEMAINE_COURANTE } from '../data/plannings';
@@ -10,9 +10,9 @@ import { MOIS_NOMS } from '../constants/mois';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Av from '../components/ui/Av';
-import PBar from '../components/ui/PBar';
 import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
+import { DilCardShared } from '../components/shared/DilCardShared';
 
 const STATUT_ORDER = { en_cours: 0, non_echu: 1, reportee: 2, executee: 3, supprimee: 4 };
 
@@ -84,28 +84,16 @@ export default function MonEspace({ user, planningCharte, planningCR, diligences
         <Section title="Mes Diligences" count={imputedDils.length} onMore={() => navigate('diligences')}>
           {imputedDils.length === 0
             ? <EmptyState icon="◎" title="Aucune diligence imputée" />
-            : imputedDils.map(d => {
-                const st = DIL_STATUTS.find(s => s.v === d.statut);
-                return (
-                  <Card key={d.id} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace' }}>{d.reference}</span>
-                      {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 4 }}>{d.intitule}</div>
-                    <PBar v={d.progression ?? 0} />
-                    <div style={{ fontSize: 11, color: C.sec, margin: '4px 0 8px' }}>
-                      📅 {fmtDate(d.echeance)}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <ActionBtn label="👁 Afficher" color={C.cours} bg={C.coursB}
-                        onClick={() => navigate('diligence-detail', { id: d.id })} />
-                      <ActionBtn label="✏️ Modifier" color={C.vert} bg={C.vertL}
-                        onClick={() => navigate('diligence-detail', { id: d.id })} />
-                    </div>
-                  </Card>
-                );
-              })
+            : imputedDils.map(d => (
+                <DilCardShared
+                  key={d.id}
+                  d={d}
+                  canAct={canAct}
+                  isAdmin={false}
+                  navigate={navigate}
+                  compact={true}
+                />
+              ))
           }
         </Section>
       )}

@@ -65,6 +65,19 @@ function getAuteurDisplay(r) {
   return val ? [val] : [];
 }
 
+function typeColor(type) {
+  if (!type) return { c: C.sec, bg: '#F0F2F5' };
+  const t = type.toLowerCase();
+  if (t.includes('charte') || t.includes('ethique')) return { c: C.violet, bg: C.violetB };
+  if (t.includes('compte-rendu') || t.includes('comité')) return { c: C.vert, bg: C.vertL };
+  if (t.includes("d'information") || t.includes('information')) return { c: C.cours, bg: C.coursB };
+  if (t.includes('note de service')) return { c: C.cours, bg: C.coursB };
+  if (t.includes('mission')) return { c: C.violet, bg: C.violetB };
+  if (t.includes('hebdomadaire') || t.includes('sous-direction')) return { c: C.teal, bg: C.tealL };
+  if (t.includes("d'activités") || t.includes("d'activites")) return { c: C.orng, bg: C.orngL };
+  return { c: C.sec, bg: '#F0F2F5' };
+}
+
 function ActionBtn({ label, color, bg, onClick }) {
   return (
     <button onClick={onClick} style={{
@@ -174,13 +187,18 @@ export default function RapportsPage({ rapports, setRapports, user }) {
         ? <EmptyState icon="📄" title="Aucun document" sub="Déposez un premier document." />
         : filtered.map(r => {
             const auteurs = getAuteurDisplay(r);
+            const tc = typeColor(r.type);
             return (
-              <Card key={r.id} style={{ marginBottom: 10 }}>
+              <Card key={r.id} style={{
+                marginBottom: 10,
+                borderLeft: `4px solid ${tc.c}`,
+                background: tc.bg,
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace' }}>{r.reference}</div>
-                  <Badge l={r.type.split(' ').slice(0, 2).join(' ')} bg={C.coursB} c={C.cours} />
+                  <Badge l={r.type.split(' ').slice(0, 2).join(' ')} bg={tc.bg} c={tc.c} />
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 4, lineHeight: 1.4 }}>{r.objet || r.titre}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: C.txt, marginBottom: 4, lineHeight: 1.4 }}>{r.objet || r.titre}</div>
 
                 {/* Auteurs tags */}
                 {auteurs.length > 0 && (

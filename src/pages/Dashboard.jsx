@@ -3,14 +3,14 @@ import { C } from '../constants/colors';
 import { ROLES_LABELS } from '../constants/roles';
 import { SERVICES } from '../constants/services';
 import { USERS } from '../constants/users';
-import { DIL_STATUTS, INFO_STATUTS } from '../constants/statuts';
+import { INFO_STATUTS } from '../constants/statuts';
 import { fmtDate } from '../utils/dates';
 import { SEMAINE_COURANTE, MOIS_COURANT } from '../data/plannings';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Av from '../components/ui/Av';
-import PBar from '../components/ui/PBar';
 import Modal from '../components/ui/Modal';
+import { DilCardShared } from '../components/shared/DilCardShared';
 
 function ActionBtn({ label, color, bg, onClick }) {
   return (
@@ -94,31 +94,16 @@ export default function Dashboard({ user, planningCharte, planningCR, diligences
           <div style={{ fontSize: 12, fontWeight: 700, color: C.sec, marginBottom: 8 }}>
             DILIGENCES ACTIVES ({activeDils.length})
           </div>
-          {activeDils.map(d => {
-            const st = DIL_STATUTS.find(s => s.v === d.statut);
-            return (
-              <Card key={d.id} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace' }}>{d.reference}</span>
-                  {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 4 }}>{d.intitule}</div>
-                <PBar v={d.progression ?? 0} />
-                <div style={{ fontSize: 11, color: C.sec, margin: '4px 0 8px' }}>
-                  📅 {fmtDate(d.echeance)}
-                  {d.joursAttente > 10 && <span style={{ color: C.urg, marginLeft: 6 }}>⚠️ {d.joursAttente}j</span>}
-                </div>
-                {canAct && (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <ActionBtn label="👁 Afficher"  color={C.cours} bg={C.coursB}
-                      onClick={() => navigate('diligence-detail', { id: d.id })} />
-                    <ActionBtn label="✏️ Modifier"  color={C.vert}  bg={C.vertL}
-                      onClick={() => navigate('diligence-detail', { id: d.id })} />
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          {activeDils.map(d => (
+            <DilCardShared
+              key={d.id}
+              d={d}
+              canAct={canAct}
+              isAdmin={false}
+              navigate={navigate}
+              compact={true}
+            />
+          ))}
         </div>
       )}
 

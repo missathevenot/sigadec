@@ -128,16 +128,18 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
               const svc       = SERVICES.find(s => s.id === entry.serviceId);
               const isCurrent = moisNum === MOIS_COURANT;
               const soumis    = charteDeposee(moisNum, entry.serviceId);
+              const cardBorderColor = soumis ? C.vert : C.orng;
+              const cardBg = soumis ? C.vertL : isCurrent ? '#FFFBF2' : C.blanc;
               return (
                 <Card key={m} style={{
                   marginBottom: 8,
-                  borderLeft: isCurrent ? `3px solid ${C.vert}` : `3px solid transparent`,
-                  background: isCurrent ? C.vertL : C.blanc,
+                  borderLeft: `4px solid ${cardBorderColor}`,
+                  background: cardBg,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                        <span style={{ fontWeight: 800, fontSize: 14, color: C.txt }}>{entry.mois}</span>
+                        <span style={{ fontWeight: 800, fontSize: 14, color: isCurrent ? C.vert : C.txt }}>{entry.mois}</span>
                         {isCurrent && (
                           <span style={{ fontSize: 9, background: C.vert, color: C.blanc, borderRadius: 6, padding: '1px 6px', fontWeight: 700 }}>EN COURS</span>
                         )}
@@ -191,11 +193,15 @@ export default function PlanningPage({ user, planningCharte, setPlanningCharte, 
             const svc       = SERVICES.find(s => s.id === serviceId);
             const isCurrent = w === SEMAINE_COURANTE;
             const depose    = crDepose(w);
+            const crBorderColor = depose ? C.vert : C.orng;
+            const crBg = depose ? C.vertL : isCurrent ? '#FFFBF2' : C.blanc;
             return (
               <div key={w} style={{
                 padding: '10px 14px', borderRadius: 10, marginBottom: 8,
-                background: isCurrent ? C.vertL : C.blanc,
-                border: isCurrent ? `1.5px solid ${C.vert}` : `1px solid ${C.bord}`,
+                background: crBg,
+                border: `1px solid ${C.bord}`,
+                borderLeft: `4px solid ${crBorderColor}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,.06)',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div>

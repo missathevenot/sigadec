@@ -80,9 +80,13 @@ export default function EmiRecPage({ user, emissions, setEmissions, recettes, se
       {filtered.length === 0
         ? <EmptyState icon="💰" title={`Aucune ${isEmi ? 'émission' : 'recette'}`} />
         : filtered.map(d => (
-          <Card key={d.id} style={{ marginBottom: 10 }}>
+          <Card key={d.id} style={{
+            marginBottom: 10,
+            borderLeft: `4px solid ${isEmi ? C.teal : C.violet}`,
+            background: isEmi ? C.tealL : C.violetB,
+          }}>
             <div style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace', marginBottom: 4 }}>{d.reference}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 4, lineHeight: 1.4 }}>{d.objet}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: C.txt, marginBottom: 4, lineHeight: 1.4 }}>{d.objet}</div>
             {d.description && <div style={{ fontSize: 12, color: C.sec, marginBottom: 4 }}>{d.description}</div>}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
               <span style={{ fontSize: 11, color: C.sec }}>{fmtDate(d.date)}</span>

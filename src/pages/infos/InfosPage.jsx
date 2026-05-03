@@ -72,12 +72,16 @@ export default function InfosPage({ infos, setInfos, user }) {
             const st     = INFO_STATUTS.find(s => s.v === inf.statut);
             const auteur = (users.length ? users : USERS).find(u => u.id === inf.auteurId);
             return (
-              <Card key={inf.id} style={{ marginBottom: 10 }}>
+              <Card key={inf.id} style={{
+                marginBottom: 10,
+                borderLeft: `4px solid ${st?.c || C.bord}`,
+                background: st?.bg || C.blanc,
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div style={{ fontSize: 10, color: C.sec, fontFamily: 'monospace' }}>{inf.reference}</div>
                   {st && <Badge l={st.l} bg={st.bg} c={st.c} />}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 6, lineHeight: 1.4 }}>{inf.titre}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: C.txt, marginBottom: 6, lineHeight: 1.4 }}>{inf.titre}</div>
                 {inf.description && <div style={{ fontSize: 12, color: C.sec, marginBottom: 6, lineHeight: 1.5 }}>{inf.description}</div>}
                 <div style={{ fontSize: 11, color: C.sec, marginBottom: 8 }}>
                   {auteur ? `${auteur.prenom} ${auteur.nom}` : '—'} · {fmtDate(inf.dateSubmission)}
