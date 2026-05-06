@@ -18,7 +18,7 @@ const MENU_ITEMS = [
   { id: 'admin',      icon: '🛡️',  label: 'Administration', adminOnly: true },
 ];
 
-export default function AppDrawer({ open, user, navigate, onClose, onLogout, currentPage }) {
+export default function AppDrawer({ open, user, navigate, onClose, onLogout, currentPage, onInstall }) {
   if (!open) return null;
 
   const svc = user?.serviceId ? SERVICES.find(s => s.id === user.serviceId) : null;
@@ -104,6 +104,30 @@ export default function AppDrawer({ open, user, navigate, onClose, onLogout, cur
         >
           📥 Télécharger le manuel
         </a>
+
+        {/* Bouton d'installation PWA — visible uniquement si le navigateur propose l'installation */}
+        {onInstall && (
+          <button
+            onClick={onInstall}
+            style={{
+              padding: '11px 0',
+              background: `linear-gradient(135deg, ${C.vertF} 0%, ${C.vert} 100%)`,
+              color: C.blanc,
+              border: 'none', borderRadius: 10,
+              fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: `0 2px 8px ${C.vert}50`,
+            }}
+          >
+            <img
+              src="icon-192.png"
+              alt="SIGADEC"
+              style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'contain' }}
+            />
+            📲 Installer version mobile
+          </button>
+        )}
+
         <button
           onClick={() => { onLogout(); onClose(); }}
           style={{

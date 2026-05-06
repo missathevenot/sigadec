@@ -38,8 +38,26 @@ export default function App() {
   const { isMobile }              = useResponsive();
   const [splash, setSplash]       = useState(true);
   const [drawerOpen, setDrawer]   = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [appInstalled, setAppInstalled]   = useState(false);
 
   useEffect(() => { initialize(); }, []);
+
+  // Capture l'événement PWA "beforeinstallprompt" (mobile Chrome/Android)
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    // Détecte si l'app est déjà installée
+    window.addEventListener('appinstalled', () => { setAppInstalled(true); setInstallPrompt(null); });
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') { setAppInstalled(true); setInstallPrompt(null); }
+  };
 
   // Heartbeat toutes les 5 min : maintient last_seen_at à jour
   // → permet à l'admin de détecter les sessions "fantômes" (navigateur fermé sans déconnexion)
@@ -102,6 +120,7 @@ export default function App() {
           onClose={() => setDrawer(false)}
           onLogout={handleLogout}
           currentPage={page}
+          onInstall={installPrompt && !appInstalled ? handleInstall : null}
         />
         <TopBar
           page={page}
