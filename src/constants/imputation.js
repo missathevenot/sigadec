@@ -26,6 +26,25 @@ export const IMPUTE_OPTIONS = [
 export const IMPUTE_LABELS    = IMPUTE_OPTIONS.map(o => o.value);
 export const EMIS_PAR_OPTIONS = [{ value: 'DCAD', label: 'DCAD' }, ...IMPUTE_OPTIONS];
 
+// ── Mapping email → valeur d'imputation (prioritaire, précis, basé sur le compte réel) ──
+export const EMAIL_TO_IMPUTE_VALUE = {
+  'luciencomoe@gmail.com':        'CT COMOE',
+  'maurytimset@gmail.com':        'CT TIMITEY',
+  'ksoultoh@yahoo.fr':            'SD KONE',
+  'doumleyz@yahoo.fr':            'SD DOUMBIA',
+  'blonadolf@gmail.com':          'SD BLON',
+  'messdiomande@hotmail.com':     'SD DIOMANDE',
+  'kosline2005@gmail.com':        'SCAFR',
+  'missathevenot@gmail.com':      'SSPDDA',
+  'seristephane79@gmail.com':     'SCR (Contentieux)',
+  'thiemele.mc@gmail.com':        'SEFR',
+  'mayouboris2dgi.scr@gmail.com': 'SCR (Réseaux)',
+  'blegnonjp@gmail.com':          'SCOAIF',
+  'hiabituehi@gmail.com':         'SCTF',
+  'mahethomas68@gmail.com':       'SPSTC',
+  'ykcvrin@gmail.com':            'SDIC',
+};
+
 // Mapping serviceId → valeur d'imputation correspondante
 export const SERVICE_TO_IMPUTE_VALUE = {
   's0':  'SAFIC',
@@ -64,11 +83,31 @@ export function getImputeLabelForService(serviceId) {
 }
 
 /**
- * Retourne les identifiants d'imputation correspondant à un utilisateur
- * (pour filtrer les diligences/courriers qui lui ont été imputés).
+ * Retourne les identifiants d'imputation correspondant à un utilisateur.
+ * Utilisé pour filtrer les diligences/rapports imputés à cet utilisateur.
+ *
+ * Priorité :
+ *  1. Mapping email → valeur (précis, basé sur le compte réel)
+ *  2. Mapping serviceId → valeur (chef de service sans email listé)
+ *  3. Fallback rôle + nom (compatibilité anciens comptes)
  */
 export function getUserImputeIds(user) {
+  if (!user) return [];
+
+  // 1. Email-based lookup (prioritaire — couvre tous les comptes réels connus)
+  if (user.email) {
+    const emailVal = EMAIL_TO_IMPUTE_VALUE[user.email.toLowerCase()];
+    if (emailVal) return [emailVal];
+  }
+
   const ids = [];
+
+  // 2. serviceId → valeur d'imputation (chef de service non listé dans le mapping email)
+  if (user.serviceId && SERVICE_TO_IMPUTE_VALUE[user.serviceId]) {
+    ids.push(SERVICE_TO_IMPUTE_VALUE[user.serviceId]);
+  }
+
+  // 3. Fallback rôle + nom (conseillers tech / sous-directeurs sans email reconnu)
   if (user.role === 'conseiller_tech') {
     const n = (user.nom || '').toUpperCase();
     if (n.includes('COMOE'))   ids.push('CT COMOE');
@@ -81,8 +120,6 @@ export function getUserImputeIds(user) {
     if (n.includes('BLON'))     ids.push('SD BLON');
     if (n.includes('KONE'))     ids.push('SD KONE');
   }
-  if (user.serviceId && SERVICE_TO_IMPUTE_VALUE[user.serviceId]) {
-    ids.push(SERVICE_TO_IMPUTE_VALUE[user.serviceId]);
-  }
-  return ids;
+
+  return [...new Set(ids)]; // dédoublonnage
 }

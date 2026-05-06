@@ -75,7 +75,10 @@ export default function MonEspace({ user, planningCharte, planningCR, diligences
             {user.prenom} {user.nom}
           </div>
           <div style={{ color: 'rgba(255,255,255,.8)', fontSize: 12, marginTop: 2 }}>{ROLES_LABELS[user.role]}</div>
-          {svc && <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 11, marginTop: 2 }}>{svc.abbr}</div>}
+          {svc
+            ? <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 11, marginTop: 2 }}>{svc.abbr}</div>
+            : imputeIds.length > 0 && <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 11, marginTop: 2 }}>{imputeIds[0]}</div>
+          }
         </div>
       </div>
 
