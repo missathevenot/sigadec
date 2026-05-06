@@ -7,7 +7,33 @@ import {
 import { buildCRPlanning } from '../data/plannings';
 import { buildDailyAlerts } from '../utils/alerts';
 
-export const useStore = create((set) => ({
+/** Marque la session de l'utilisateur comme connectée en base */
+async function upsertSession(u) {
+  if (!u?.id) return;
+  await supabase.from('user_sessions').upsert({
+    user_id:         u.id,
+    user_email:      u.email,
+    user_name:       `${u.prenom} ${u.nom}`,
+    role:            u.role,
+    service_id:      u.serviceId || null,
+    connected_at:    new Date().toISOString(),
+    last_seen_at:    new Date().toISOString(),
+    disconnected_at: null,
+    is_online:       true,
+  }, { onConflict: 'user_id' });
+}
+
+/** Marque la session de l'utilisateur comme déconnectée en base */
+async function closeSession(userId) {
+  if (!userId) return;
+  await supabase.from('user_sessions').update({
+    is_online:       false,
+    disconnected_at: new Date().toISOString(),
+    last_seen_at:    new Date().toISOString(),
+  }).eq('user_id', userId);
+}
+
+export const useStore = create((set, get) => ({
   // Auth
   user: null,
   setUser: (user) => set({ user }),
@@ -32,20 +58,22 @@ export const useStore = create((set) => ({
   loading:        true,
 
   // Chargement initial + restauration de session Supabase Auth
-  // Appelé au démarrage ET après chaque login (le RLS bloque les requêtes anonymes)
   initialize: async () => {
     set({ loading: true });
 
     // Écoute les événements Auth (déclenché par signOut depuis n'importe où)
     supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') set({ user: null, notifications: [] });
+      if (event === 'SIGNED_OUT') {
+        const currentUser = get().user;
+        if (currentUser?.id) closeSession(currentUser.id); // fire & forget
+        set({ user: null, notifications: [] });
+      }
     });
 
     // Vérifie la session persistée (localStorage) pour restaurer automatiquement
     const { data: { session } } = await supabase.auth.getSession();
 
-    // Chargement de toutes les données (authentifié = données réelles, anonyme = tableaux vides)
-    // Note : utilisateurs ne contient JAMAIS mot_de_passe côté client
+    // Chargement de toutes les données
     const [
       { data: dils },
       { data: cous },
@@ -79,8 +107,8 @@ export const useStore = create((set) => ({
       );
       if (raw?.statut === 'actif') {
         restoredUser = mapUser(raw);
+        upsertSession(restoredUser); // enregistre la session (fire & forget)
       } else {
-        // Session valide mais compte inactif → déconnexion forcée
         await supabase.auth.signOut();
       }
     }

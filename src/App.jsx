@@ -41,6 +41,18 @@ export default function App() {
 
   useEffect(() => { initialize(); }, []);
 
+  // Heartbeat toutes les 5 min : maintient last_seen_at à jour
+  // → permet à l'admin de détecter les sessions "fantômes" (navigateur fermé sans déconnexion)
+  useEffect(() => {
+    if (!user?.id) return;
+    const tick = () =>
+      supabase.from('user_sessions')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+    const id = setInterval(tick, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [user?.id]);
+
   const handleSplashDone = useCallback(() => setSplash(false), []);
   const unread = notifications.filter(n => !n.lu).length;
 
