@@ -7,5 +7,5 @@ export const ROLES_LABELS = {
   admin:          'Administrateur',
 };
 export const ROLES_SANS_SERVICE    = ['directeur','conseiller_tech','sous_directeur','secretariat'];
-export const ROLES_SOUMISSION_DIL  = ['directeur','conseiller_tech','sous_directeur','admin'];
+export const ROLES_SOUMISSION_DIL  = ['directeur','conseiller_tech','sous_directeur','chef_service','admin'];
 export const ROLES_COURRIER_RECU   = ['directeur','conseiller_tech','sous_directeur','secretariat'];
