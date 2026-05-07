@@ -44,7 +44,7 @@ export const EMAIL_TO_IMPUTE_VALUE = {
   'mahethomas68@gmail.com':       'SPSTC',
   'ykcvrin@gmail.com':            'SDIC',
   'amanislater@gmail.com':        'SEI',
-  'wanafulgence@gmail.com':       'SVRC',
+  'wanacoulibaly74@gmail.com':    'SVRC',
 };
 
 // Mapping serviceId → valeur d'imputation correspondante
