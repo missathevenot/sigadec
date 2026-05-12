@@ -28,7 +28,12 @@ export default function Dashboard({ user, planningCharte, planningCR, diligences
   const [viewCR, setViewCR]         = useState(false);
 
   const canAct       = user.role !== 'secretariat';
-  const activeDils   = diligences.filter(d => ['en_cours','non_echu','reportee'].includes(d.statut));
+  const activeDils   = diligences
+    .filter(d => ['en_cours','non_echu','reportee'].includes(d.statut))
+    .sort((a, b) => {
+      const getNum = s => { const m = (s || '').match(/^(\d+)\./); return m ? parseInt(m[1], 10) : Infinity; };
+      return getNum(a.intitule) - getNum(b.intitule);
+    });
   const urgentCours  = courriers.filter(c => c.sens === 'recu' && c.joursAttente > 10);
   const activeInfos  = infos.filter(i => ['actualite','urgent'].includes(i.statut));
   const unreadAlerts = notifications.filter(n => !n.lu);

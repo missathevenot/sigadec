@@ -40,6 +40,17 @@ const FONCTION_OPTS = [
 // ── Helpers temporels ──────────────────────────────────────────────────────────
 const todayStr = today();
 
+/** Extrait le numéro d'ordre initial (ex: "7. Objet" → 7, sinon Infinity) */
+function getOrderNum(intitule) {
+  const m = (intitule || '').match(/^(\d+)\./);
+  return m ? parseInt(m[1], 10) : Infinity;
+}
+
+/** Supprime le numéro d'ordre initial (ex: "7. Objet" → "Objet") */
+function stripOrderNum(text) {
+  return (text || '').replace(/^\d+\.\s*/, '');
+}
+
 function daysUntil(dateStr) {
   if (!dateStr) return null;
   return Math.ceil((new Date(dateStr + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86400000);
@@ -298,8 +309,11 @@ export default function DiligencesPage({ diligences, setDiligences, courriers, u
       }
       return true;
     })
-    // Tri : en retard > urgent > autres, puis par échéance
+    // Tri primaire : numéro d'ordre croissant — secondaire : urgence
     .sort((a, b) => {
+      const numA = getOrderNum(a.intitule);
+      const numB = getOrderNum(b.intitule);
+      if (numA !== numB) return numA - numB;
       const scoreA = isLate(a) ? 2 : isUrgentSoon(a) ? 1 : 0;
       const scoreB = isLate(b) ? 2 : isUrgentSoon(b) ? 1 : 0;
       if (scoreB !== scoreA) return scoreB - scoreA;
@@ -535,14 +549,22 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
 
   const statutOpts = DIL_STATUTS.map(s => ({ value: s.v, label: s.l }));
 
+  // Auto 100% quand statut → Exécutée
+  const handleStatutChange = (v) => {
+    setStatut(v);
+    if (v === 'executee') setProgression(100);
+  };
+
   const submit = async () => {
     if (!intitule.trim() || !echeance) { setErr('Objet et échéance sont requis.'); return; }
     setSaving(true);
+    const finalIntitule = statut === 'executee' ? stripOrderNum(intitule.trim()) : intitule.trim();
+    const finalProg     = statut === 'executee' ? 100 : Number(progression);
     const ref = genRef('DIL', diligences.map(d => d.reference), dateSoumis);
     const newDil = {
-      id: `dil${Date.now()}`, reference: ref, intitule: intitule.trim(),
+      id: `dil${Date.now()}`, reference: ref, intitule: finalIntitule,
       assigneA: user.id, serviceIds: [], imputeA,
-      statut, progression: Number(progression),
+      statut, progression: finalProg,
       dateSubmission: dateSoumis, echeance, description: description.trim(),
       courrierIds: [], objetDoc, fichierNom,
       historique: [], dateReport: null, facteursReport: null,
@@ -557,7 +579,7 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
     <Modal title="Soumettre une diligence" onClose={onClose}>
       <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
       <MultiSelectImpute label="Imputée à" selected={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
-      <Select label="Statut" value={statut} onChange={setStatut} options={statutOpts} required />
+      <Select label="Statut" value={statut} onChange={handleStatutChange} options={statutOpts} required />
       <Input label="Date de soumission" value={dateSoumis} onChange={setDateSoumis} type="date" required />
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 6 }}>
@@ -587,13 +609,22 @@ function EditModal({ diligence, setDiligences, onClose }) {
   const [saving, setSaving]     = useState(false);
   const [err, setErr]           = useState('');
 
+  // Auto 100% quand statut → Exécutée
+  const handleStatutChange = (v) => {
+    setStatut(v);
+    if (v === 'executee') setProg(100);
+  };
+
   const save = async () => {
     if (!intitule.trim()) { setErr("L'objet est requis."); return; }
     setSaving(true);
-    const updates = { intitule: intitule.trim(), impute_a: imputeA, echeance, description, statut, progression: Number(progression) };
+    // Supprime le n° d'ordre si statut devient Exécutée
+    const finalIntitule = statut === 'executee' ? stripOrderNum(intitule.trim()) : intitule.trim();
+    const finalProg     = statut === 'executee' ? 100 : Number(progression);
+    const updates = { intitule: finalIntitule, impute_a: imputeA, echeance, description, statut, progression: finalProg };
     await supabase.from('diligences').update(updates).eq('id', diligence.id);
     setDiligences(ds => ds.map(d => d.id === diligence.id
-      ? { ...d, intitule: intitule.trim(), imputeA, echeance, description, statut, progression: Number(progression) }
+      ? { ...d, intitule: finalIntitule, imputeA, echeance, description, statut, progression: finalProg }
       : d));
     setSaving(false);
     onClose();
@@ -603,7 +634,7 @@ function EditModal({ diligence, setDiligences, onClose }) {
     <Modal title="Modifier la diligence" sub={diligence.reference} onClose={onClose}>
       <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
       <MultiSelectImpute label="Imputée à" selected={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
-      <Select label="Statut" value={statut} onChange={setStatut} options={DIL_STATUTS.map(s => ({ value: s.v, label: s.l }))} required />
+      <Select label="Statut" value={statut} onChange={handleStatutChange} options={DIL_STATUTS.map(s => ({ value: s.v, label: s.l }))} required />
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 6 }}>
           Taux de réalisation : <span style={{ color: C.vert, fontWeight: 800 }}>{progression}%</span>
