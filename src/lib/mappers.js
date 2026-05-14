@@ -46,6 +46,7 @@ export const mapRapport = (r) => ({
   resume: r.resume || '', dateSubmission: r.date_submission,
   createdAt: r.created_at,
   fichierNom: r.fichier_nom || '',
+  lienWeb:    r.lien_web || '',
   auteurIds:     Array.isArray(r.auteur_ids)     ? r.auteur_ids     : [],
   sousDirIds:    Array.isArray(r.sous_directions) ? r.sous_directions : [],
 });
@@ -130,6 +131,7 @@ export const rapportToDb = (r) => ({
   semaine: r.semaine, mois_doc: r.moisDoc, auteur: r.auteur,
   resume: r.resume, date_submission: r.dateSubmission,
   fichier_nom:    r.fichierNom  || null,
+  lien_web:       r.lienWeb     || null,
   auteur_ids:     Array.isArray(r.auteurIds)  ? r.auteurIds  : [],
   sous_directions: Array.isArray(r.sousDirIds) ? r.sousDirIds : [],
 });

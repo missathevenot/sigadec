@@ -223,12 +223,31 @@ export default function RapportsPage({ rapports, setRapports, user }) {
                 </div>
                 {r.resume && <div style={{ fontSize: 12, color: C.sec, marginBottom: 8 }}>{r.resume}</div>}
 
+                {/* Lien web */}
+                {r.lienWeb && (
+                  <a
+                    href={r.lienWeb.startsWith('http') ? r.lienWeb : `https://${r.lienWeb}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      marginBottom: 8, fontSize: 11, color: C.cours, fontWeight: 600,
+                      textDecoration: 'none', wordBreak: 'break-all',
+                    }}
+                  >
+                    🔗 <span style={{ textDecoration: 'underline' }}>{r.lienWeb}</span>
+                  </a>
+                )}
+
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {canAct && <ActionBtn label="👁 Afficher"  color={C.cours} bg={C.coursB} onClick={() => setViewing(r)} />}
                   {canAct && <ActionBtn label="✏️ Modifier"  color={C.vert}  bg={C.vertL}  onClick={() => setEditing(r)} />}
                   {r.fichierNom && (
                     <ActionBtn label="📂 Ouvrir" color={C.violet || '#7C3AED'} bg={C.violetB || '#EDE9FE'}
                       onClick={() => openDoc(r.fichierNom)} />
+                  )}
+                  {r.lienWeb && (
+                    <ActionBtn label="🔗 Accéder" color={C.cours} bg={C.coursB}
+                      onClick={() => window.open(r.lienWeb.startsWith('http') ? r.lienWeb : `https://${r.lienWeb}`, '_blank', 'noopener')} />
                   )}
                 </div>
               </Card>
@@ -297,6 +316,26 @@ function ViewDocModal({ rapport: r, onClose }) {
           </button>
         </div>
       )}
+      {r.lienWeb && (
+        <div style={{ marginTop: 10 }}>
+          <a
+            href={r.lienWeb.startsWith('http') ? r.lienWeb : `https://${r.lienWeb}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'block', width: '100%', padding: '10px 0',
+              background: C.vertL, color: C.vert,
+              border: `1.5px solid ${C.vert}`, borderRadius: 10,
+              fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              textAlign: 'center', textDecoration: 'none',
+            }}
+          >
+            🔗 Accéder via le lien web
+          </a>
+          <div style={{ fontSize: 10, color: C.sec, marginTop: 4, textAlign: 'center', wordBreak: 'break-all' }}>
+            {r.lienWeb}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -321,6 +360,7 @@ function EditDocModal({ rapport: r, setRapports, onClose }) {
   const [semaine, setSemaine]     = useState(String(r.semaine || isoWeek(new Date())));
   const [resume, setResume]       = useState(r.resume || '');
   const [fichierNom, setFich]     = useState(r.fichierNom || '');
+  const [lienWeb, setLienWeb]     = useState(r.lienWeb || '');
   const [fileObj, setFileObj]     = useState(null);
   const [saving, setSaving]       = useState(false);
   const [err, setErr]             = useState('');
@@ -345,6 +385,7 @@ function EditDocModal({ rapport: r, setRapports, onClose }) {
       semaine: isHebdo ? Number(semaine) : null,
       resume: resume.trim(),
       fichier_nom: storedFichierNom || null,
+      lien_web: lienWeb.trim() || null,
       auteur_ids: auteurIds,
       sous_directions: sousDirIds,
     };
@@ -353,7 +394,7 @@ function EditDocModal({ rapport: r, setRapports, onClose }) {
       ? { ...x, objet: objet.trim(), titre: objet.trim(), type, dateSubmission: dateSoumis,
           moisDoc: Number(moisDoc), semaine: isHebdo ? Number(semaine) : null,
           resume: resume.trim(), fichierNom: storedFichierNom || x.fichierNom,
-          auteurIds, sousDirIds }
+          lienWeb: lienWeb.trim() || x.lienWeb, auteurIds, sousDirIds }
       : x));
     setSaving(false);
     onClose();
@@ -370,6 +411,7 @@ function EditDocModal({ rapport: r, setRapports, onClose }) {
       {isHebdo && <Input label="N° semaine" value={semaine} onChange={setSemaine} type="number" />}
       <Textarea label="Résumé" value={resume} onChange={setResume} rows={2} />
       <UploadZone label="Remplacer le fichier (optionnel)" fichierNom={fichierNom} setFichierNom={setFich} onFile={setFileObj} />
+      <Input label="Lien web d'accès (optionnel)" value={lienWeb} onChange={setLienWeb} placeholder="https://…" />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
       <Btn onClick={save} full disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer les modifications'}</Btn>
     </Modal>
@@ -382,11 +424,12 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
   const [dateSoumis, setDate]     = useState(today());
   const [type, setType]           = useState('');
   const [moisDoc, setMoisDoc]     = useState(String(new Date().getMonth() + 1));
-  const [auteurIds, setAuteurIds] = useState(getUserImputeIds(user));
+  const [auteurIds, setAuteurIds] = useState([]);   // vide par défaut
   const [sousDirIds, setSdIds]    = useState([]);
   const [semaine, setSemaine]     = useState(String(isoWeek(new Date())));
   const [resume, setResume]       = useState('');
   const [fichierNom, setFich]     = useState('');
+  const [lienWeb, setLienWeb]     = useState('');
   const [fileObj, setFileObj]     = useState(null);
   const [saving, setSaving]       = useState(false);
   const [err, setErr]             = useState('');
@@ -418,6 +461,7 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
       resume: resume.trim(), dateSubmission: dateSoumis,
       createdAt: new Date().toISOString(),
       fichierNom: storedFichierNom,
+      lienWeb: lienWeb.trim() || null,
       auteurIds,
       sousDirIds,
     };
@@ -442,6 +486,7 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
         Référence : {previewRef}
       </div>
       <UploadZone label="Fichier" fichierNom={fichierNom} setFichierNom={setFich} onFile={setFileObj} />
+      <Input label="Lien web d'accès (optionnel)" value={lienWeb} onChange={setLienWeb} placeholder="https://…" />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
       <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Déposer le document'}</Btn>
     </Modal>
