@@ -575,26 +575,58 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
     onClose();
   };
 
+  const secStyle = {
+    fontSize: 10, fontWeight: 700, color: C.sec, letterSpacing: 1.2,
+    textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`,
+    paddingBottom: 6, marginBottom: 14, marginTop: 6,
+  };
+
   return (
     <Modal title="Soumettre une diligence" onClose={onClose}>
-      <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required />
-      <MultiSelectImpute label="Imputée à" selected={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
-      <Select label="Statut" value={statut} onChange={handleStatutChange} options={statutOpts} required />
-      <Input label="Date de soumission" value={dateSoumis} onChange={setDateSoumis} type="date" required />
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.sec, marginBottom: 6 }}>
-          Taux de réalisation : <span style={{ color: C.vert, fontWeight: 800 }}>{progression}%</span>
-        </label>
-        <input type="range" min={0} max={100} value={progression} onChange={e => setProgression(e.target.value)} style={{ width: '100%', accentColor: C.vert }} />
-        <div style={{ marginTop: 6 }}><ProgBar v={Number(progression)} d={{}} /></div>
+
+      {/* ── Section 1 : Informations générales ── */}
+      <div style={secStyle}>Informations générales</div>
+
+      <Input label="Objet de la diligence" value={intitule} onChange={setIntitule} required placeholder="Saisir l'objet..." />
+      <MultiSelectImpute label="Imputée à" selected={imputeA} onChange={setImputeA} options={IMPUTE_OPTIONS} placeholder="Choisir un responsable" />
+
+      {/* Statut + Date soumission — 2 colonnes */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <Select label="Statut" value={statut} onChange={handleStatutChange} options={statutOpts} required />
+        <Input label="Date de soumission" value={dateSoumis} onChange={setDateSoumis} type="date" required />
       </div>
+
+      {/* Taux de réalisation avec badge vert */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: C.sec }}>
+            Taux de réalisation <span style={{ color: C.urg }}>*</span>
+          </label>
+          <span style={{
+            background: Number(progression) === 100 ? C.vert : Number(progression) > 0 ? C.cours : C.orng,
+            color: '#fff', borderRadius: 20, padding: '2px 10px',
+            fontSize: 12, fontWeight: 800, minWidth: 38, textAlign: 'center',
+          }}>
+            {progression}%
+          </span>
+        </div>
+        <input type="range" min={0} max={100} value={progression}
+          onChange={e => setProgression(e.target.value)}
+          style={{ width: '100%', accentColor: C.vert }} />
+      </div>
+
       <Input label="Date d'échéance" value={echeance} onChange={setEcheance} type="date" required />
-      <Textarea label="Description" value={description} onChange={setDescription} rows={3} />
-      <Input label="Nature du document" value={objetDoc} onChange={setObjetDoc} />
+
+      {/* ── Section 2 : Détails & pièces jointes ── */}
+      <div style={secStyle}>Détails &amp; pièces jointes</div>
+
+      <Textarea label="Description" value={description} onChange={setDescription} rows={3} placeholder="Ajouter une description..." />
+      <Input label="Nature du document" value={objetDoc} onChange={setObjetDoc} placeholder="Ex: rapport, contrat..." />
       <UploadZone label="Téléverser un document" fichierNom={fichierNom} setFichierNom={setFichierNom} />
+
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
       <Btn onClick={submit} full disabled={saving} style={{ fontWeight: 700, fontSize: 14 }}>
-        {saving ? 'Enregistrement…' : 'Soumettre la diligence'}
+        {saving ? 'Enregistrement…' : '↑ Soumettre la diligence'}
       </Btn>
     </Modal>
   );

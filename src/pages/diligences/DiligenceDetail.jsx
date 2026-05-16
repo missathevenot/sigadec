@@ -110,9 +110,6 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
         }}>
           ← Retour aux diligences
         </button>
-        <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 10, color: C.sec }}>
-          {diligence.reference}
-        </span>
       </div>
 
       <div style={{ padding: '0 14px' }}>
@@ -126,9 +123,15 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
           marginBottom: 12,
           boxShadow: `0 4px 20px rgba(0,0,0,.10), 0 1px 6px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04)`,
         }}>
-          {/* Badge statut */}
-          <div style={{ marginBottom: 10 }}>
-            <StatutBadge statut={diligence.statut} echeance={diligence.echeance} />
+          {/* Ligne 1 : badge statut + référence */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <StatutBadge statut={diligence.statut} echeance={diligence.echeance} />
+              <span style={{ fontSize: 11, color: C.sec, fontWeight: 600 }}>
+                {(diligence.progression ?? 0)}% réalisé
+              </span>
+            </div>
+            <span style={{ fontFamily: 'monospace', fontSize: 10, color: C.sec }}>{diligence.reference}</span>
           </div>
 
           {/* Titre — gras et souligné */}
@@ -143,7 +146,9 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
 
           {/* Taux de réalisation */}
           <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: C.sec, fontWeight: 600 }}>Taux de réalisation</span>
+            <span style={{ fontSize: 10, color: C.sec, fontWeight: 700, letterSpacing: .8, textTransform: 'uppercase' }}>
+              Taux de réalisation
+            </span>
             <span style={{ fontSize: 13, fontWeight: 900, color: accentColor }}>
               {diligence.progression ?? 0}%
             </span>
@@ -297,12 +302,13 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
               onMouseLeave={() => setHoverEdit(false)}
               style={{
                 width: '100%', padding: '12px 0',
-                background: C.vert, color: C.blanc,
-                border: 'none', borderRadius: 12,
-                fontWeight: 700, fontSize: 14, cursor: 'pointer',
-                boxShadow: hoverEdit ? `0 6px 20px ${C.vert}50` : '0 2px 8px rgba(0,0,0,.10)',
-                transition: 'box-shadow .2s, transform .15s',
-                transform: hoverEdit ? 'translateY(-1px)' : 'none',
+                background: hoverEdit ? C.vertL : C.blanc,
+                color: hoverEdit ? C.vert : C.txt,
+                border: `1.5px solid ${hoverEdit ? C.vert : C.bord}`,
+                borderRadius: 12, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                boxShadow: hoverEdit ? `0 4px 14px ${C.vert}30` : '0 1px 4px rgba(0,0,0,.06)',
+                transition: 'all .2s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
               ✏️ Modifier la diligence
@@ -316,15 +322,17 @@ export default function DiligenceDetail({ diligence, diligences, setDiligences, 
               onMouseLeave={() => setHoverDel(false)}
               style={{
                 width: '100%', padding: '12px 0',
-                background: hoverDel ? ALERT_RED : '#FEF2F2',
-                color: hoverDel ? C.blanc : ALERT_RED,
-                border: `1.5px solid ${ALERT_RED}`, borderRadius: 12,
-                fontWeight: 700, fontSize: 14, cursor: deleting ? 'not-allowed' : 'pointer',
-                boxShadow: hoverDel ? `0 6px 20px ${ALERT_RED}40` : 'none',
+                background: hoverDel ? '#FEF2F2' : C.blanc,
+                color: ALERT_RED,
+                border: `1.5px solid ${ALERT_RED}`,
+                borderRadius: 12, fontWeight: 600, fontSize: 14,
+                cursor: deleting ? 'not-allowed' : 'pointer',
+                boxShadow: hoverDel ? `0 4px 14px ${ALERT_RED}25` : '0 1px 4px rgba(0,0,0,.06)',
                 transition: 'all .2s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              {deleting ? 'Suppression…' : '🗑️ Supprimer la diligence'}
+              🗑️ {deleting ? 'Suppression…' : 'Supprimer la diligence'}
             </button>
           )}
         </div>

@@ -471,25 +471,56 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
     onClose();
   };
 
+  const secStyle = {
+    fontSize: 10, fontWeight: 700, color: C.sec, letterSpacing: 1.2,
+    textTransform: 'uppercase', borderBottom: `1px solid ${C.bord}`,
+    paddingBottom: 6, marginBottom: 14, marginTop: 6,
+  };
+
   return (
     <Modal title="Déposer un document" onClose={onClose}>
-      <Input label="Objet du document" value={objet} onChange={setObjet} required />
-      <Input label="Date de soumission" value={dateSoumis} onChange={setDate} type="date" required />
+
+      {/* ── Section 1 : Identification ── */}
+      <div style={secStyle}>Identification</div>
+
+      <Input label="Objet du document" value={objet} onChange={setObjet} required placeholder="Saisir l'objet..." />
       <Select label="Type" value={type} onChange={setType} options={typeOpts} placeholder="Choisir un type…" required />
-      <Select label="Mois" value={moisDoc} onChange={setMoisDoc} options={moisOpts} />
-      <MultiSelectImpute label="Auteur(s)" selected={auteurIds} onChange={setAuteurIds} options={IMPUTE_OPTIONS} placeholder="Choisir…" />
-      <MultiSelectImpute label="Sous-Direction(s)" selected={sousDirIds} onChange={setSdIds} options={SOUS_DIR_OPTIONS} placeholder="Choisir…" />
-      <Input label="Année" value={String(annee)} onChange={() => {}} disabled />
-      {isHebdo && <Input label="N° semaine" value={semaine} onChange={setSemaine} type="number" />}
-      <Textarea label="Résumé" value={resume} onChange={setResume} rows={2} />
-      <div style={{ fontSize: 11, color: C.sec, marginBottom: 12, fontFamily: 'monospace' }}>
-        Référence : {previewRef}
+
+      {/* Date soumission + Mois — 2 colonnes */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <Input label="Date de soumission" value={dateSoumis} onChange={setDate} type="date" required />
+        <Select label="Mois" value={moisDoc} onChange={setMoisDoc} options={moisOpts} />
       </div>
+
+      {/* Année + Auteur(s) — 2 colonnes */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <Input label="Année" value={String(annee)} onChange={() => {}} disabled />
+        <MultiSelectImpute label="Auteur(s)" selected={auteurIds} onChange={setAuteurIds} options={IMPUTE_OPTIONS} placeholder="Choisir..." />
+      </div>
+
+      <MultiSelectImpute label="Sous-Direction(s)" selected={sousDirIds} onChange={setSdIds} options={SOUS_DIR_OPTIONS} placeholder="Choisir..." />
+      {isHebdo && <Input label="N° semaine" value={semaine} onChange={setSemaine} type="number" />}
+      <Textarea label="Résumé" value={resume} onChange={setResume} rows={2} placeholder="Saisir un résumé..." />
+
+      {/* Référence auto-générée */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+        padding: '8px 12px', background: C.vertL, borderRadius: 8,
+      }}>
+        <span style={{ fontSize: 12, color: C.vert }}>🔗</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 11, color: C.vert, fontWeight: 700 }}>{previewRef}</span>
+        <span style={{ fontSize: 10, color: C.sec }}>Référence auto-générée</span>
+      </div>
+
+      {/* ── Section 2 : Pièces jointes ── */}
+      <div style={secStyle}>Pièces jointes</div>
+
       <UploadZone label="Fichier" fichierNom={fichierNom} setFichierNom={setFich} onFile={setFileObj} />
-      <Input label="Lien web d'accès (optionnel)" value={lienWeb} onChange={setLienWeb} placeholder="https://…" />
+      <Input label="Lien web d'accès (optionnel)" value={lienWeb} onChange={setLienWeb} placeholder="https://..." />
+
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
       <Btn onClick={submit} full disabled={saving} style={{ fontWeight: 700, fontSize: 14 }}>
-        {saving ? 'Enregistrement…' : 'Déposer le document'}
+        {saving ? 'Enregistrement…' : '↑ Déposer le document'}
       </Btn>
     </Modal>
   );
