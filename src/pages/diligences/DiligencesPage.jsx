@@ -593,7 +593,9 @@ function SubmitModal({ diligences, setDiligences, courriers, user, onClose }) {
       <Input label="Nature du document" value={objetDoc} onChange={setObjetDoc} />
       <UploadZone label="Téléverser un document" fichierNom={fichierNom} setFichierNom={setFichierNom} />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Soumettre la diligence'}</Btn>
+      <Btn onClick={submit} full disabled={saving} style={{ fontWeight: 700, fontSize: 14 }}>
+        {saving ? 'Enregistrement…' : 'Soumettre la diligence'}
+      </Btn>
     </Modal>
   );
 }

@@ -68,6 +68,7 @@ export const SERVICE_TO_IMPUTE_VALUE = {
 
 // Sous-Directions disponibles dans Documentation
 export const SOUS_DIR_OPTIONS = [
+  { value: 'Cabinet du Directeur',                 label: 'Cabinet du Directeur' },
   { value: 'SD Information Cadastrale',            label: 'SD Information Cadastrale' },
   { value: 'SD Assiette et du Contrôle IF',        label: 'SD Assiette et du Contrôle IF' },
   { value: 'SD Production, Travaux Fonciers',      label: 'SD Production, Travaux Fonciers' },

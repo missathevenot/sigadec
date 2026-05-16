@@ -1,7 +1,7 @@
 export const SERVICES = [
   { id:'s0',  nom:"Service des Applicatifs et de la Fiscalité Immobilière et Cadastrales (SAFIC)", sd:"Dir. des Systèmes d'Information",       chefId:'u9',  abbr:'SAFIC' },
-  { id:'s1',  nom:'Service Prospection & Suivi-Évaluation Travaux cadastraux',                     sd:'Direction du Cadastre',                  chefId:'u10', abbr:'SPSE'  },
-  { id:'s2',  nom:'Service des Études & Statistiques cadastrales',                                 sd:'Direction du Cadastre',                  chefId:'u11', abbr:'SESC'  },
+  { id:'s1',  nom:'Service Prospection & Suivi-Évaluation Travaux cadastraux',                     sd:'Cabinet du Directeur',                   chefId:'u10', abbr:'SPSE'  },
+  { id:'s2',  nom:'Service des Études & Statistiques cadastrales',                                 sd:'Cabinet du Directeur',                   chefId:'u11', abbr:'SESC'  },
   { id:'s3',  nom:"Service de la Coordination des Opérations d'assiette",                          sd:'SD Assiette & Contrôle',                 chefId:'u12', abbr:'SCOAIF'},
   { id:'s4',  nom:"Service d'Appui au Recouvrement",                                               sd:'SD Assiette & Contrôle',                 chefId:'u13', abbr:'SARIF' },
   { id:'s5',  nom:'Service des Réformes & Contentieux',                                            sd:'SD Assiette & Contrôle',                 chefId:'u14', abbr:'SRC'   },

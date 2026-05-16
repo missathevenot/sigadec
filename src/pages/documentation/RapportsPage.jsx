@@ -488,7 +488,9 @@ function DeposeModal({ rapports, setRapports, user, onClose }) {
       <UploadZone label="Fichier" fichierNom={fichierNom} setFichierNom={setFich} onFile={setFileObj} />
       <Input label="Lien web d'accès (optionnel)" value={lienWeb} onChange={setLienWeb} placeholder="https://…" />
       {err && <div style={{ color: C.urg, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-      <Btn onClick={submit} full disabled={saving}>{saving ? 'Enregistrement…' : 'Déposer le document'}</Btn>
+      <Btn onClick={submit} full disabled={saving} style={{ fontWeight: 700, fontSize: 14 }}>
+        {saving ? 'Enregistrement…' : 'Déposer le document'}
+      </Btn>
     </Modal>
   );
 }
